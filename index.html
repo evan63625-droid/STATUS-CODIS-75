@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Statut Véhicule - SDIS LUTECE BSPP</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<style>
+body{margin:0;font-family:Arial;background:#1e1e1e;color:white}
+header{background:#b30000;padding:12px;text-align:center;font-weight:bold}
+.container{padding:10px;max-width:650px;margin:auto}
+.box{background:#2b2b2b;padding:10px;margin-bottom:10px;border-radius:8px}
+button{padding:8px;margin-top:5px;cursor:pointer;width:100%}
+select,input{width:100%;margin:5px 0;padding:8px;box-sizing:border-box}
+.status{background:#3a3a3a;padding:10px;border-radius:6px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>🚒 STATUT VÉHICULE</header>
+
+<div class="container">
+
+<div class="box" id="loginBox">
+<h3>Connexion véhicule</h3>
+
+<select id="vehiculeLogin">
+<option value="CCF-01">CCF-01</option>
+<option value="CCGC-01">CCGC-01</option>
+<option value="EPA-01">EPA-01</option>
+<option value="FPT-01">FPT-01</option>
+<option value="FPT-02">FPT-02</option>
+<option value="FSR-01">FSR-01</option>
+<option value="SSSM-01">SSSM-01</option>
+<option value="VGRIMP-01">VGRIMP-01</option>
+<option value="VL-01">VL-01</option>
+<option value="VLI-01">VLI-01</option>
+<option value="VLCG-01">VLCG-01</option>
+<option value="VPL-01">VPL-01</option>
+<option value="VSAV-01">VSAV-01</option>
+<option value="VSAV-02">VSAV-02</option>
+</select>
+
+<input id="passwordVehicule" type="password" placeholder="Mot de passe véhicule">
+<button onclick="loginVehicule()">Connexion</button>
+</div>
+
+<div class="box" id="statusBox" style="display:none">
+<h3 id="titreVehicule"></h3>
+<div class="status" id="statutActuel"></div>
+<div class="status" id="interventionActuelle"></div>
+
+<select id="newStatus">
+<option value="1">Départ</option>
+<option value="2">Sur les lieux</option>
+<option value="3">Message</option>
+<option value="4">Urgent</option>
+<option value="5">Transit hôpital</option>
+<option value="6">Arrivé hôpital</option>
+<option value="7">Disponible</option>
+<option value="8">Indispo</option>
+<option value="9">Rentré</option>
+</select>
+
+<button onclick="changerStatut()">Envoyer statut</button>
+<button onclick="logout()">Déconnexion</button>
+</div>
+
+</div>
+
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyBB8KP4Btsjvv1Dktsmt1qf1eujiuGKAWg",
+  authDomain:"codis-lutece.firebaseapp.com",
+  databaseURL:"https://codis-lutece-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"codis-lutece",
+  storageBucket:"codis-lutece.firebasestorage.app",
+  messagingSenderId:"762134476859",
+  appId:"1:762134476859:web:afcf9a2ae4073a6966c41e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+const passwordsVehicules={
+"CCF-01":"ccf01",
+"CCGC-01":"ccgc01",
+"EPA-01":"epa01",
+"FPT-01":"fpt01",
+"FPT-02":"fpt02",
+"FSR-01":"fsr01",
+"SSSM-01":"sssm01",
+"VGRIMP-01":"vgrimp01",
+"VL-01":"vl01",
+"VLI-01":"vli01",
+"VLCG-01":"vlcg01",
+"VPL-01":"vpl01",
+"VSAV-01":"vsav01",
+"VSAV-02":"vsav02"
+};
+
+const statusLabels={
+1:"Départ",
+2:"Sur les lieux",
+3:"Message",
+4:"Urgent",
+5:"Transit hôpital",
+6:"Arrivé hôpital",
+7:"Disponible",
+8:"Indispo",
+9:"Rentré"
+};
+
+let vehiculeConnecte=null;
+let vehicules=[];
+
+db.ref("vehicules").on("value",s=>{
+vehicules=s.val()||[];
+if(vehiculeConnecte){
+afficherStatut();
+}
+});
+
+function loginVehicule(){
+let veh=document.getElementById("vehiculeLogin").value;
+let pass=document.getElementById("passwordVehicule").value.trim();
+
+if(passwordsVehicules[veh]!==pass){
+alert("❌ Accès refusé");
+return;
+}
+
+vehiculeConnecte=veh;
+
+document.getElementById("loginBox").style.display="none";
+document.getElementById("statusBox").style.display="block";
+document.getElementById("titreVehicule").innerText=vehiculeConnecte;
+
+afficherStatut();
+}
+
+function afficherStatut(){
+let v=vehicules.find(x=>x.name===vehiculeConnecte);
+
+if(!v){
+document.getElementById("statutActuel").innerText="Véhicule introuvable";
+return;
+}
+
+document.getElementById("statutActuel").innerText="Statut actuel : "+(statusLabels[v.status]||v.status);
+document.getElementById("newStatus").value=v.status;
+
+if(v.intervention){
+document.getElementById("interventionActuelle").innerText=
+"Inter N° "+v.intervention+" | "+(v.type||"")+" | "+(v.precision||"")+" | "+(v.adresse||"");
+}else{
+document.getElementById("interventionActuelle").innerText="Aucune intervention engagée";
+}
+}
+
+function changerStatut(){
+let v=vehicules.find(x=>x.name===vehiculeConnecte);
+
+if(!v){
+alert("Véhicule introuvable");
+return;
+}
+
+v.status=parseInt(document.getElementById("newStatus").value);
+
+db.ref("vehicules").set(vehicules)
+.then(()=>alert("✅ Statut envoyé au CODIS"));
+}
+
+function logout(){
+vehiculeConnecte=null;
+document.getElementById("passwordVehicule").value="";
+document.getElementById("loginBox").style.display="block";
+document.getElementById("statusBox").style.display="none";
+}
+</script>
+
+</body>
+</html>
