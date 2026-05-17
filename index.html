@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CODIS SIMU</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#101214;color:#f4f4f4}
+header{height:54px;background:#a90000;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-weight:bold;border-bottom:3px solid #e32b2b}
+.header-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.header-sub{font-size:13px;color:#ffd6d6;display:flex;align-items:center;gap:16px}
+.header-clock{font-size:15px;font-weight:bold;color:#fff;letter-spacing:1px;font-variant-numeric:tabular-nums}
+.nav-btn{width:auto;margin:0;padding:7px 10px;background:#7c0000;border:1px solid #ff6b6b;font-size:12px;border-radius:6px;color:white;font-weight:bold;cursor:pointer}
+.nav-btn:hover{background:#d01818}
+.nav-btn.active{background:#d01818;border-color:#ff4444}
+
+/* LOGIN */
+#login{position:fixed;inset:0;background:#0b0d0f;display:flex;justify-content:center;align-items:center;z-index:999;padding:20px}
+.login-card{width:100%;max-width:390px;background:#1c2024;border:1px solid #343a40;border-radius:8px;padding:24px}
+.login-card h2{text-align:center;margin-top:0;color:#ff6b6b;letter-spacing:1px}
+.login-logo{text-align:center;font-size:28px;margin-bottom:4px;letter-spacing:2px;font-weight:bold;color:#c91515}
+
+/* PAGES */
+.app{display:none;height:calc(100vh - 54px);grid-template-columns:330px 1fr 360px;grid-template-rows:1fr 210px;gap:10px;padding:10px}
+.guard-page,.effectifs-page,.remise-page{display:none;height:calc(100vh - 54px);padding:10px;overflow:auto}
+
+/* PANELS */
+.panel{background:#1b1f23;border:1px solid #313840;border-radius:8px;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.panel h3{margin:0;padding:10px 12px;background:#252b31;border-bottom:1px solid #313840;font-size:15px;display:flex;align-items:center;gap:8px}
+.panel-body{padding:10px;overflow:auto;flex:1}
+.left{grid-column:1;grid-row:1/3}
+.center{grid-column:2;grid-row:1}
+.right{grid-column:3;grid-row:1/3}
+.bottom{grid-column:2;grid-row:2}
+
+/* INPUTS */
+input,textarea,select{width:100%;margin:5px 0;padding:9px;border:1px solid #49515a;border-radius:6px;background:#111417;color:white;font-size:14px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:#c91515}
+textarea{min-height:80px;resize:vertical}
+button{width:100%;padding:10px;margin-top:6px;border:0;border-radius:6px;background:#c91515;color:white;font-weight:bold;cursor:pointer;font-size:14px;transition:background .15s}
+button:hover{background:#e22424}
+button.secondary{background:#3d454d}
+button.secondary:hover{background:#4b5560}
+button.success{background:#1a6b2e}
+button.success:hover{background:#237a3a}
+button.warning{background:#7a4400}
+button.warning:hover{background:#9a5500}
+
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.kpi{background:#111417;border:1px solid #303740;border-radius:7px;padding:10px;text-align:center}
+.kpi b{display:block;font-size:24px;margin-bottom:2px}
+.kpi span{font-size:11px;color:#aeb7c2;text-transform:uppercase;letter-spacing:.5px}
+
+/* CARDS */
+.inter-card,.vehicle,.log-line,.guard-vehicle-card{background:#111417;border:1px solid #303740;border-left:4px solid #666;border-radius:7px;padding:9px;margin-bottom:8px;cursor:pointer;transition:background .12s}
+.inter-card:hover,.vehicle:hover,.guard-vehicle-card:hover{background:#171b1f}
+.guard-vehicle-card{border-left-color:#e53935}
+.guard-vehicle-card.complet{border-left-color:#00c853}
+.guard-vehicle-card.incomplet{border-left-color:#ff9800}
+.inter-top,.veh-top{display:flex;justify-content:space-between;gap:10px;font-weight:bold;align-items:center}
+.meta,.guard-summary{color:#aeb7c2;font-size:13px;margin-top:4px}
+.badge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:bold;background:#333}
+.badge-red{background:#a90000}
+.badge-green{background:#1a6b2e;color:#fff}
+.badge-orange{background:#b35900;color:#fff}
+.badge-spv{background:#1a6b2e;color:#fff}
+.badge-spp{background:#0d3d8c;color:#fff}
+
+/* STATUS COLORS */
+.status-1{color:#00c853;font-weight:bold}.status-2{color:#42a5f5;font-weight:bold}.status-3{color:#ffeb3b;font-weight:bold}.status-4{color:#ff1744;font-weight:bold}.status-5{color:#ce93d8;font-weight:bold}.status-6{color:#ff9800;font-weight:bold}.status-7{color:#69f0ae;font-weight:bold}.status-8{color:#999;font-weight:bold}.status-9{color:#f5f5f5;font-weight:bold}.status-10{color:#ff5252;font-weight:bold}
+
+.empty{color:#9aa4af;font-size:14px;padding:8px 0}
+
+/* POPUPS */
+#popup,#interPopup,#guardPopup,#qualPopup,#agentQualPopup,#remiseInterPopup,#confirmModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.76);justify-content:center;align-items:center;z-index:1000;padding:16px}
+.modal{width:100%;max-width:520px;max-height:90vh;overflow:auto;background:#1b1f23;border:1px solid #424b55;border-radius:8px;padding:16px}
+.modal h3{margin-top:0;margin-bottom:14px;border-bottom:1px solid #313840;padding-bottom:10px}
+.detail-line{margin:7px 0;padding-bottom:6px;border-bottom:1px solid #303740;font-size:14px}
+
+/* DEPART ALERT */
+#departAlert{display:none;position:fixed;inset:0;background:#0a0000;z-index:1200;flex-direction:column;justify-content:center;align-items:center;padding:40px}
+.depart-alert-inner{width:100%;max-width:700px;background:#1b1f23;border:3px solid #e32b2b;border-radius:12px;padding:30px;text-align:center}
+.depart-alert-title{font-size:32px;font-weight:bold;color:#ff4444;text-transform:uppercase;letter-spacing:2px;margin-bottom:24px;animation:blink 1s step-start infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.depart-alert-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #303740;font-size:17px;text-align:left}
+.depart-alert-row b{color:#aeb7c2;min-width:130px}
+.depart-alert-row span{color:#fff;flex:1}
+.depart-alert-effectif{margin-top:18px;background:#111417;border-radius:8px;padding:14px;text-align:left;font-size:14px;white-space:pre-wrap;color:#e0e0e0;max-height:260px;overflow:auto}
+
+/* ALERTE IMPOSSIBLE */
+#impossibleAlert{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:1300;flex-direction:column;justify-content:center;align-items:center;padding:30px}
+.impossible-inner{width:100%;max-width:560px;background:#1b1f23;border:3px solid #ff1744;border-radius:12px;padding:28px;text-align:center}
+.impossible-title{font-size:26px;font-weight:bold;color:#ff1744;text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;animation:blink 0.8s step-start infinite}
+.impossible-msg{font-size:15px;color:#f4f4f4;line-height:1.6;margin-bottom:20px}
+
+/* EFFECTIF FORM */
+.effectif-form-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end}
+.effectif-form-row input,.effectif-form-row select{margin:0}
+.effectif-form-row button{width:auto;margin:0;padding:9px 14px}
+
+/* GUARD */
+.guard-legend{display:flex;gap:14px;margin-bottom:10px;font-size:12px;color:#aeb7c2;align-items:center;flex-wrap:wrap}
+.guard-legend-dot{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:middle}
+.guard-layout{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:1200px}
+
+/* QUALIFICATIONS */
+.qual-section{margin-bottom:14px;background:#111417;border:1px solid #303740;border-radius:7px;overflow:hidden}
+.qual-section-title{padding:8px 12px;background:#1e2428;font-size:13px;font-weight:bold;color:#c0c8d0;border-bottom:1px solid #303740;text-transform:uppercase;letter-spacing:.5px}
+.qual-checkbox-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0}
+.qual-checkbox-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #1e2226;transition:background .1s}
+.qual-checkbox-item:hover{background:#171b1f}
+.qual-checkbox-item input[type=checkbox]{width:16px;height:16px;margin:0;cursor:pointer;accent-color:#c91515}
+.qual-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.qual-tag{background:#1a2a1a;color:#69f0ae;border:1px solid #2a4a2a;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:bold}
+.qual-tag.cod{background:#1a2040;color:#82b1ff;border-color:#2a3060}
+.qual-tag.conducteur{background:#3a2800;color:#ffcc80;border-color:#5a4000}
+.qual-tag.equipier{background:#2a1a2a;color:#ce93d8;border-color:#4a3060}
+.qual-tag.operateur{background:#001a3a;color:#80d8ff;border-color:#003060}
+.qual-tag.divers{background:#1a1500;color:#ffe082;border-color:#3a3000}
+.qual-tag.none{background:#1e2226;color:#666;border-color:#303740;font-style:italic}
+
+/* PRESENCE */
+.presence-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.presence-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.presence-item{background:#111417;border:1px solid #303740;border-radius:7px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.presence-item.present{border-color:#00c853;background:#0a1a0e}
+.presence-name{font-size:13px;font-weight:bold}
+.presence-toggle{width:auto;margin:0;padding:5px 10px;font-size:12px;border-radius:4px;background:#3d454d}
+.presence-toggle.active{background:#1a6b2e}
+.presence-count{font-size:13px;color:#aeb7c2}
+.presence-name-clickable{cursor:pointer;text-decoration:underline dotted 1px #555;font-weight:bold}
+.presence-name-clickable:hover{color:#ffcc80;text-decoration:underline}
+
+/* PIQUET */
+.piquet-slot-card{background:#111417;border:1px solid #303740;border-radius:7px;padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.piquet-slot-label{font-size:11px;color:#aeb7c2;text-transform:uppercase;letter-spacing:.5px;min-width:115px;font-weight:bold}
+.piquet-slot-value{font-size:13px;font-weight:bold;color:#f4f4f4;flex:1}
+.piquet-slot-value.empty{color:#555;font-weight:normal;font-style:italic}
+.piquet-slot-actions{display:flex;gap:4px;flex-shrink:0}
+.piquet-slot-btn{width:auto;margin:0;padding:5px 12px;font-size:12px;border-radius:4px}
+.piquet-slot-clear{width:auto;margin:0;padding:5px 9px;font-size:12px;border-radius:4px;background:#3d0000}
+.piquet-agent-item{background:#1e2428;border:1px solid #424b55;border-radius:6px;padding:10px 14px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:background .1s}
+.piquet-agent-item:hover{background:#252b31;border-color:#c91515}
+.piquet-agent-name{font-weight:bold;font-size:14px}
+.piquet-select-header{font-size:13px;color:#ff9800;font-weight:bold;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #303740}
+.piquet-optional-sep{margin:10px 0 6px;font-size:11px;color:#ff9800;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;border-top:1px solid #303740;padding-top:8px}
+.piquet-allreq-note{font-size:11px;color:#ff9800;margin-bottom:6px;padding:4px 8px;background:#1a1000;border-radius:4px;border:1px solid #3a2000}
+
+/* EFFECTIF CARD */
+.effectif-card{background:#111417;border:1px solid #303740;border-left:4px solid #444;border-radius:7px;padding:9px 12px;margin-bottom:8px}
+.effectif-card:hover{background:#171b1f}
+.effectif-card-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.effectif-card-actions{display:flex;gap:6px}
+.effectif-card-actions button{width:auto;margin:0;padding:4px 10px;font-size:12px;border-radius:4px}
+
+/* AGENT QUAL POPUP */
+.qual-col-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:4px}
+.qual-col-block{background:#111417;border-radius:8px;padding:10px;cursor:pointer;border:1px solid #303740;transition:border-color .15s}
+.qual-col-block:hover{border-color:#c91515}
+.qual-col-block.expanded{border-color:#c91515}
+.qual-col-header{font-size:11px;color:#ff9800;text-transform:uppercase;letter-spacing:.5px;font-weight:bold;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #2a2f35;display:flex;justify-content:space-between;align-items:center}
+.qual-col-tag{display:inline-block;background:#1e2428;border:1px solid #424b55;border-radius:4px;padding:3px 8px;font-size:12px;color:#e0e0e0;margin:2px 0;width:100%;box-sizing:border-box}
+.qual-col-tag.has{border-color:#c91515;color:#fff;background:#1a0505}
+.qual-col-empty{font-size:12px;color:#444;font-style:italic}
+.qual-col-detail{display:none;margin-top:6px;padding-top:6px;border-top:1px solid #252b31}
+.qual-col-block.expanded .qual-col-detail{display:block}
+.qual-count{font-size:11px;background:#c91515;color:#fff;border-radius:10px;padding:1px 6px}
+
+/* REMISE */
+.remise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;max-width:1200px}
+.remise-veh-card{background:#111417;border:1px solid #303740;border-left:4px solid #666;border-radius:7px;padding:12px;cursor:pointer;transition:background .12s,border-color .15s}
+.remise-veh-card:hover{background:#171b1f}
+.remise-veh-card.status-engaged{border-left-color:#ff5252}
+.remise-veh-card.status-dispo{border-left-color:#00c853}
+.remise-veh-card.status-indispo{border-left-color:#666}
+.remise-veh-name{font-size:16px;font-weight:bold;margin-bottom:6px}
+.remise-veh-status{font-size:13px;margin-bottom:4px}
+.remise-inter-badge{display:inline-block;background:#a90000;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;margin-top:4px;font-weight:bold}
+
+/* TOAST */
+#toastContainer{position:fixed;bottom:24px;right:24px;z-index:2000;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:#1b1f23;border:1px solid #424b55;border-radius:8px;padding:12px 16px;font-size:14px;color:#f4f4f4;min-width:260px;max-width:360px;box-shadow:0 4px 16px rgba(0,0,0,.5);pointer-events:auto;animation:slideIn .2s ease;display:flex;align-items:center;gap:10px}
+.toast.success{border-color:#00c853}
+.toast.error{border-color:#ff5252}
+.toast.warning{border-color:#ff9800}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeOut{to{transform:translateX(100%);opacity:0}}
+.toast.hiding{animation:fadeOut .3s ease forwards}
+
+/* CONFIRM */
+.confirm-modal-box{width:100%;max-width:400px;background:#1b1f23;border:1px solid #424b55;border-radius:8px;padding:20px}
+.confirm-modal-box h4{margin:0 0 12px;font-size:16px}
+.confirm-modal-box p{margin:0 0 16px;color:#aeb7c2;font-size:14px}
+.confirm-modal-btns{display:flex;gap:8px}
+.confirm-modal-btns button{flex:1;margin:0}
+
+/* INTER FILTER */
+.inter-filter{display:flex;gap:6px;margin-bottom:8px}
+.filter-btn{width:auto;margin:0;padding:5px 12px;font-size:12px;border-radius:4px;background:#252b31;border:1px solid #313840;color:#aeb7c2}
+.filter-btn.active{background:#a90000;border-color:#e32b2b;color:#fff}
+
+/* AUTOCOMPLETE */
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;left:0;right:0;top:100%;background:#1b1f23;border:1px solid #424b55;border-radius:6px;z-index:100;max-height:180px;overflow:auto;display:none}
+.autocomplete-list.open{display:block}
+.autocomplete-item{padding:7px 10px;cursor:pointer;font-size:13px;border-bottom:1px solid #252b31}
+.autocomplete-item:hover{background:#252b31}
+
+/* IO ROW */
+.io-row{display:flex;gap:8px;margin-top:10px}
+.io-row button{flex:1;margin:0;padding:8px;font-size:12px}
+
+/* JOURNAL */
+.journal-toolbar{display:flex;gap:6px;margin-bottom:8px;align-items:center}
+.journal-toolbar input{margin:0;padding:6px 10px;font-size:12px;flex:1}
+.journal-toolbar button{width:auto;margin:0;padding:6px 10px;font-size:12px}
+
+/* BANNIERE FEUILLE DE GARDE */
+.garde-banner{display:none;background:#0d3d1a;border:1px solid #00c853;border-radius:7px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#69f0ae;animation:slideIn .3s ease}
+
+@media(max-width:1100px){
+  header{height:auto;min-height:54px;gap:8px;flex-wrap:wrap;padding:8px 12px}
+  .app{height:auto;display:none;grid-template-columns:1fr;grid-template-rows:auto}
+  .left,.center,.right,.bottom{grid-column:1;grid-row:auto}
+  .effectif-form-row{grid-template-columns:1fr;gap:6px}
+  .effectif-form-row button{width:100%}
+  .guard-layout{grid-template-columns:1fr}
+  .presence-grid{grid-template-columns:1fr}
+  .qual-checkbox-grid{grid-template-columns:1fr}
+  .remise-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+}
+</style>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  </head>
+<body>
+
+<div id="toastContainer"></div>
+
+<div id="confirmModal">
+  <div class="confirm-modal-box">
+    <h4 id="confirmTitle">Confirmation</h4>
+    <p id="confirmText"></p>
+    <div class="confirm-modal-btns">
+      <button id="confirmOk">Confirmer</button>
+      <button class="secondary" id="confirmCancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALERTE IMPOSSIBLE MANQUE PERSONNEL -->
+<div id="impossibleAlert">
+  <div class="impossible-inner">
+    <div class="impossible-title">&#9888; DEPART IMPOSSIBLE</div>
+    <div class="impossible-msg" id="impossibleMsg"></div>
+    <button onclick="closeImpossibleAlert()" style="background:#c91515;max-width:200px;margin:0 auto;display:block">Fermer</button>
+  </div>
+</div>
+
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">CODIS</div>
+    <div style="text-align:center;color:#9aa4af;font-size:12px;margin-bottom:18px">SDIS LUTECE BSPP — Simulateur</div>
+    <input id="matricule" placeholder="Matricule" autocomplete="off">
+    <input id="password" type="password" placeholder="Mot de passe">
+    <select id="role">
+      <option value="OPERATEUR">Operateur</option>
+      <option value="STATIONNAIRE">Stationnaire</option>
+      <option value="CHEF">Chef de salle</option>
+      <option value="ADMIN">Admin</option>
+    </select>
+    <div id="loginError" style="display:none;margin-top:8px;padding:8px 10px;background:#5a0000;border:1px solid #ff4444;border-radius:6px;color:#ffaaaa;font-size:13px;text-align:center"></div>
+    <button type="button" onclick="loginUser()" style="margin-top:12px">Connexion</button>
+  </div>
+</div>
+
+<header>
+  <div class="header-left">
+    <button class="nav-btn" onclick="goHome()">Accueil</button>
+    <button class="nav-btn nav-codis" onclick="showCodis()" style="display:none">CODIS</button>
+    <button class="nav-btn nav-guard" onclick="showGuard()" style="display:none">Garde</button>
+    <button class="nav-btn nav-remise" onclick="showRemise()" style="display:none">Remise</button>
+    <button class="nav-btn nav-effectifs" onclick="showEffectifs()" style="display:none">Effectifs</button>
+    <div style="font-size:14px;letter-spacing:.5px">SDIS LUTECE BSPP — CODIS SIMU</div>
+  </div>
+  <div class="header-sub">
+    <span id="userInfo">Non connecte</span>
+    <span class="header-clock" id="headerClock"></span>
+  </div>
+</header>
+
+<!-- CODIS APP -->
+<main class="app" id="app">
+  <section class="panel left">
+    <h3>Creation depart</h3>
+    <div class="panel-body">
+      <!-- Banniere feuille de garde mise a jour -->
+      <div class="garde-banner" id="gardeBanner">&#128310; Feuille de garde mise a jour — effectif synchronise</div>
+      <select id="type" onchange="updatePrecis()">
+        <option value="">Type intervention</option>
+        <option value="SAP - Secours a personne">SAP - Secours a personne</option>
+        <option value="INC - Incendie">INC - Incendie</option>
+        <option value="AVP - Accident voie publique">AVP - Accident voie publique</option>
+        <option value="DIV - Operation diverse">DIV - Operation diverse</option>
+      </select>
+      <select id="precision"><option value="">Precision intervention</option></select>
+      <input id="adresse" placeholder="Adresse">
+      <textarea id="obs" placeholder="Observations"></textarea>
+      <div class="autocomplete-wrap">
+        <input id="vehiculesInter" placeholder="Ex: VSAV-01 FPT-01" autocomplete="off" oninput="onVehInput()">
+        <div class="autocomplete-list" id="vehAutocomplete"></div>
+      </div>
+      <div id="vehSelectedTags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px"></div>
+      <div id="createInterError" style="display:none;margin-top:6px;padding:7px 10px;background:#5a0000;border:1px solid #ff4444;border-radius:6px;color:#ffaaaa;font-size:13px"></div>
+      <button onclick="createInter()" style="margin-top:10px">Creer le depart</button>
+      <div style="margin-top:14px">
+        <div style="font-size:13px;color:#aeb7c2;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Derniere fiche</div>
+        <div id="sheet" class="empty">Aucune intervention creee.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel center">
+    <h3>Interventions en cours</h3>
+    <div class="panel-body">
+      <div class="kpi-row">
+        <div class="kpi"><b id="kpiInter">0</b><span>Interventions</span></div>
+        <div class="kpi"><b id="kpiAlertes">0</b><span>Alertes</span></div>
+        <div class="kpi"><b id="kpiDispo">0</b><span>Disponibles</span></div>
+      </div>
+      <div class="inter-filter">
+        <button class="filter-btn active" id="filterEnCours" onclick="setInterFilter('en_cours')">En cours</button>
+        <button class="filter-btn" id="filterToutes" onclick="setInterFilter('toutes')">Toutes</button>
+      </div>
+      <div id="interList" class="empty">Aucune intervention en cours.</div>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <h3>Parc vehicules</h3>
+    <div class="panel-body">
+      <input id="searchVeh" placeholder="Rechercher un vehicule..." oninput="renderVeh()">
+      <div id="veh"></div>
+    </div>
+  </section>
+
+  <section class="panel bottom">
+    <h3>Main courante</h3>
+    <div class="panel-body">
+      <div class="journal-toolbar">
+        <input id="journalSearch" placeholder="Rechercher..." oninput="renderJournal()">
+        <button onclick="exportJournal()" style="background:#252b31;border:1px solid #424b55">Export</button>
+      </div>
+      <div id="journal"><div class="empty">Aucun evenement.</div></div>
+    </div>
+  </section>
+</main>
+
+<!-- GARDE -->
+<main class="guard-page" id="guardPage">
+  <div class="guard-layout">
+    <section class="panel">
+      <h3>
+        <span>Presents a la garde</span>
+        <span id="presenceCountBadge" class="badge badge-green" style="margin-left:auto">0 presents</span>
+      </h3>
+      <div class="panel-body">
+        <div class="presence-header">
+          <span style="font-size:13px;color:#aeb7c2">Cochez les agents presents ce soir.</span>
+          <button class="warning" onclick="resetPresences()" style="width:auto;margin:0;padding:5px 10px;font-size:12px">Reset presences</button>
+        </div>
+        <div class="presence-grid" id="presenceList"><div class="empty">Aucun effectif enregistre.</div></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Feuille de garde</h3>
+      <div class="panel-body">
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+          <input id="guardStationnaire" placeholder="@Pseudo stationnaire" style="margin:0;flex:1">
+          <button onclick="sendFeuilleDGardeWebhook()" style="width:auto;margin:0;padding:9px 14px">Envoyer</button>
+        </div>
+        <div id="guardSendStatus" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:6px;font-size:13px;text-align:center"></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button class="secondary" onclick="affecterAutomatiquement()" style="flex:1;margin:0;font-size:12px;padding:7px">Affectation auto</button>
+          <button class="secondary" onclick="resetPiquets()" style="flex:1;margin:0;font-size:12px;padding:7px">Reset piquets</button>
+        </div>
+        <div class="guard-legend">
+          <span><span class="guard-legend-dot" style="background:#00c853"></span>Complet</span>
+          <span><span class="guard-legend-dot" style="background:#ff9800"></span>Incomplet</span>
+        </div>
+        <div id="guardVehicleList"></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- REMISE -->
+<main class="remise-page" id="remisePage">
+  <div style="max-width:1200px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0;font-size:18px">Remise — Etat du parc</h2>
+      <div style="font-size:13px;color:#aeb7c2">
+        <span style="color:#00c853">●</span> Disponible &nbsp;
+        <span style="color:#ff5252">●</span> En intervention &nbsp;
+        <span style="color:#999">●</span> Indispo
+      </div>
+    </div>
+    <div class="remise-grid" id="remiseGrid"></div>
+  </div>
+</main>
+
+<!-- EFFECTIFS -->
+<main class="effectifs-page" id="effectifsPage">
+  <section class="panel" style="max-width:960px">
+      <h3>Effectifs Discord</h3>
+      <div class="panel-body">
+        <div class="effectif-form-row">
+          <input id="effectifPrenom" placeholder="Prenom">
+          <input id="effectifPseudo" placeholder="@Pseudo Discord">
+          <input id="effectifDiscordId" placeholder="ID Discord">
+          <select id="effectifType">
+            <option value="SPV">SPV</option>
+            <option value="SPP">SPP</option>
+          </select>
+          <button onclick="saveEffectif()">Ajouter</button>
+        </div>
+        <div class="io-row">
+          <button onclick="exportEffectifs()" style="background:#252b31;border:1px solid #424b55">Exporter JSON</button>
+          <label style="flex:1;margin:0">
+            <button onclick="document.getElementById('importFile').click()" style="background:#252b31;border:1px solid #424b55;margin:0">Importer JSON</button>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importEffectifs(this)">
+          </label>
+        </div>
+        <div id="effectifList" style="margin-top:14px"></div>
+      </div>
+    </section>
+  </main>
+
+<!-- POPUP STATUT VEH -->
+<div id="popup">
+  <div class="modal">
+    <h3>Modifier statut vehicule</h3>
+    <div id="statusBtns"></div>
+    <button class="secondary" onclick="closePopup()" style="margin-top:8px">Fermer</button>
+  </div>
+</div>
+
+<!-- POPUP FICHE INTER -->
+<div id="interPopup">
+  <div class="modal">
+    <h3>Fiche intervention</h3>
+    <div id="interContent"></div>
+    <button onclick="confirmerCloture()">Cloturer l'intervention</button>
+    <button class="secondary" onclick="closeInter()" style="margin-top:6px">Fermer</button>
+  </div>
+</div>
+
+<!-- POPUP PIQUET -->
+<div id="guardPopup">
+  <div class="modal" style="max-width:520px">
+    <h3 id="guardPopupTitle">Piquets vehicule</h3>
+    <div id="piquetSlots"></div>
+    <div id="piquetAgentList" style="display:none">
+      <div class="piquet-select-header" id="piquetAgentListLabel"></div>
+      <div id="piquetAgentChips" style="max-height:280px;overflow:auto"></div>
+      <button class="secondary" onclick="closePiquetAgentList()" style="margin-top:8px">Annuler</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px" id="piquetPopupBtns">
+      <button onclick="saveSelectedGuard()">Enregistrer</button>
+      <button class="secondary" onclick="closeGuardPopup()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP QUALIF ADMIN -->
+<div id="qualPopup">
+  <div class="modal" style="max-width:480px">
+    <h3 id="qualPopupTitle">Qualifications</h3>
+    <div id="qualSections"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="saveQualPopup()">Enregistrer</button>
+      <button class="secondary" onclick="closeQualPopup()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- POPUP QUALIF AGENT (STATIONNAIRE) -->
+<div id="agentQualPopup">
+  <div class="modal" style="max-width:560px">
+    <h3 id="agentQualPopupTitle">Qualifications</h3>
+    <div id="agentQualPopupBody"></div>
+    <button class="secondary" onclick="closeAgentQualPopup()" style="margin-top:14px">Fermer</button>
+  </div>
+</div>
+
+<!-- POPUP REMISE INTER -->
+<div id="remiseInterPopup">
+  <div class="modal" style="max-width:520px">
+    <h3 id="remiseInterTitle">Informations vehicule</h3>
+    <div id="remiseInterContent"></div>
+    <button class="secondary" onclick="closeRemiseInterPopup()" style="margin-top:12px">Fermer</button>
+  </div>
+</div>
+
+<!-- ALERTE DEPART -->
+<div id="departAlert">
+  <div class="depart-alert-inner">
+    <div class="depart-alert-title">NOUVEAU DEPART</div>
+    <div id="departAlertBody"></div>
+    <div id="departAlertCountdown" style="margin-top:16px;font-size:13px;color:#ff9800;font-weight:bold;letter-spacing:.5px"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="ouvrirFeuilleGarde()" style="flex:1;font-size:15px;padding:13px 0;background:#1a6b2e">Acceder a la feuille de garde</button>
+      <button onclick="closeDepartAlert()" style="width:120px;font-size:14px;padding:13px 0;background:#333">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+var passwords = {"SP-95":"BSPP95","SP-09":"CTA09","BSPPlutece":"Codis75*","SP-120":"NB120OP"};
+
+  /* ===== FIREBASE SYNC ===== */
+    var firebaseConfig = {
+      apiKey: "AIzaSyBB8KP4Btsjvv1Dktsmt1qf1eujiuGKAWg",
+      authDomain: "codis-lutece.firebaseapp.com",
+      databaseURL: "https://codis-lutece-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "codis-lutece",
+      storageBucket: "codis-lutece.firebasestorage.app",
+      messagingSenderId: "762134476859",
+      appId: "1:762134476859:web:afcf9a2ae4073a6966c41e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+    var _fbListenerActive = false;
+    var _receivingFromFirebase = false;
+
+    function pushVehToFirebase(veh) {
+      if (!db || _receivingFromFirebase) return;
+      var data = { status: veh.status, intervention: veh.intervention || null };
+      db.ref("radio_vehicules/" + veh.name).set(data).catch(function(){});
+    }
+
+    function pushAllVehToFirebase() {
+      if (!db || _receivingFromFirebase) return;
+      vehicules.forEach(function(v) { pushVehToFirebase(v); });
+    }
+
+    /* Rafraichit toutes les vues visibles (operateur ET stationnaire) */
+    function refreshAllViews() {
+      var appEl    = document.getElementById("app");
+      var guardEl  = document.getElementById("guardPage");
+      var remiseEl = document.getElementById("remisePage");
+      if (appEl    && appEl.style.display    === "grid")  { renderVeh(); renderInterventions(); updateKpis(); }
+      if (guardEl  && guardEl.style.display  === "block") { renderGuardVehicles(); }
+      if (remiseEl && remiseEl.style.display === "block") { renderRemise(); }
+    }
+
+    function startFirebaseListener() {
+      if (_fbListenerActive) return;
+      _fbListenerActive = true;
+      db.ref("radio_vehicules").on("value", function(snap) {
+        var val = snap.val();
+        if (!val) return;
+        var changed = false;
+        vehicules.forEach(function(v) {
+          var remote = val[v.name];
+          if (!remote) return;
+          if (remote.status === v.status) return;
+          v.status = remote.status;
+          if (remote.intervention) { v.intervention = remote.intervention; }
+          else if (remote.status === 7 || remote.status === 8 || remote.status === 9) { delete v.intervention; }
+          changed = true;
+          addJournal(v.name + " -> " + (statusLabels[v.status] || v.status) + " (radio vehicule)");
+        });
+        if (changed) {
+          /* Sauvegarder sans repousser vers Firebase (evite la boucle infinie) */
+          _receivingFromFirebase = true;
+          localStorage.setItem("codisVeh", JSON.stringify(vehicules));
+          localStorage.setItem("codisJournal", JSON.stringify(journal));
+          _receivingFromFirebase = false;
+          refreshAllViews();
+        }
+      });
+    }
+
+    var usersMap  = {"SP-95":["OPERATEUR","CHEF","STATIONNAIRE"],"SP-09":["OPERATEUR","CHEF","STATIONNAIRE"],"BSPPlutece":["ADMIN"],"SP-120":["OPERATEUR","STATIONNAIRE"]};
+var DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1503861591551119520/0HJSt3tCLkMlkmdHbrt8NMVNdScd51dg0OqgzOstlxo0sHZL0FEk8OqE7xlUiDFCKiDk";
+
+var defaultVehicules = [
+  {name:"CCF-01",status:7},{name:"CCGC-01",status:7},{name:"EPA-01",status:7},
+  {name:"FPT-01",status:7},{name:"FPT-02",status:7},{name:"FSR-01",status:7},
+  {name:"SSSM-01",status:7},{name:"VGRIMP-01",status:7},{name:"VL-01",status:7},
+  {name:"VLCG-01",status:7},{name:"VLI-01",status:7},{name:"VPL-01",status:7},
+  {name:"VSAV-01",status:7},{name:"VSAV-02",status:7}
+];
+
+var statusLabels = {1:"Depart",2:"Sur les lieux",3:"Message",4:"Urgent",5:"Transit hopital",6:"Arrive hopital",7:"Disponible",8:"Indispo",9:"Rentre",10:"Alerte"};
+
+/* ===== PRECISIONS ETENDUES ===== */
+var precisions = {
+  "SAP - Secours a personne": [
+    "Malaise / Perte de connaissance","ACR - Arret cardio-respiratoire","Detresse respiratoire","Douleur thoracique","AVC - Accident vasculaire cerebral",
+    "Hypertension artérielle","Hypoglycemie / Diabetique","Crise convulsive / Epilepsie","Trouble neurologique","Trouble psychiatrique / Agitation",
+    "Trauma cranien","Trauma du rachis","Fracture membre superieur","Fracture membre inferieur","Plaie / Hemorragie","Amputation traumatique",
+    "Brulure thermique","Brulure chimique","Electrisation / Foudroiement","Intoxication medicamenteuse","Intoxication CO","Intoxication produit chimique",
+    "Noyade / Quasi-noyade","Ensevelissement","Pendaison / Asphyxie","Accouchement / Parturiente","Pediatrie - Nourrisson","Pediatrie - Enfant",
+    "Personne agee / Chute","Tentative de suicide","Agression / Coups et blessures","Personne bloquee (chute)","Malaise sur voie publique",
+    "Mort apparente","Polytraumatisme grave","Demande de secours indeterminee"
+  ],
+  "INC - Incendie": [
+    "Habitation - Appartement","Habitation - Maison individuelle","Cave / Sous-sol","Combles / Toiture","Local commun / Couloir",
+    "Local technique / Electrique","Commerce en rez-de-chaussee","Bureau / Immeuble de bureaux","ERP - Ecole / Universite","ERP - Hopital / Clinique",
+    "ERP - Hotel / Residences","ERP - Centre commercial","ERP - Cinema / Salle de spectacle","ERP - Musee / Bibliotheque",
+    "Immeuble de grande hauteur (IGH)","Batiment industriel / Usine","Entrepot / Hangar","Parking couvert","Station service / Hydrocarbures",
+    "Vehicule leger (VL)","Vehicule utilitaire / VU","Poids lourd (PL)","Bus / Autocar","Vehicule en tunnel",
+    "Feux de foret / Lande","Haie / Broussailles / Debroussaillement","Ordures menageres / Bacs","Feux de cheminee","Feux de bateau / Fluvial",
+    "Feux d'ascenseur / Machinerie","Feux avec risque d'explosion","Feux avec victimes","Feux avec danger chimique (NRBC)"
+  ],
+  "AVP - Accident voie publique": [
+    "VL simple - Sans blesse","VL avec blesse leger","VL avec blesse grave","VL avec incarcere","VL contre obstacle fixe",
+    "Moto / Scooter - Sans blesse","Moto avec blesse","Moto avec blesse grave","Moto contre obstacle fixe",
+    "Velo / Trottinette - Sans blesse","Velo avec blesse","Pieton renverse - Leger","Pieton renverse - Grave",
+    "Poids lourd (PL) implique","Bus / Autocar implique","Vehicule contre train / RER","Accident ferroviaire",
+    "Accident fluvial / Nautique","Carambolage - Plusieurs vehicules","Accident sur autoroute / voie rapide",
+    "Accident en tunnel","Chute de vehicule / Ravin","AVP avec risque d'incendie","AVP avec risque chimique (citerne)"
+  ],
+  "DIV - Operation diverse": [
+    "Fuite de gaz naturel - Interieur","Fuite de gaz naturel - Exterieur","Odeur suspecte indeterminee","Risque chimique / NRBC","Decouverte de colis suspect",
+    "Ascenseur bloque avec personne","Ascenseur bloque sans personne","Personne bloquee (porte / hygiene)","Ouverture de porte - Urgence medicale","Ouverture de porte - Autre",
+    "Inondation / Ruissellement","Voie publique inondee","Cave inondee","Pompage / Epuisement","Degat des eaux",
+    "Effondrement partiel de structure","Effondrement total de structure","Chute d'arbre / Branche sur voie","Chute d'arbre sur vehicule","Tempete / Toiture arrachee",
+    "Recherche de personne","Personne disparue en milieu naturel","Personne en danger sur hauteur","Sauvetage en milieu perileux","Sauvetage en milieu aquatique",
+    "Animal dangereux / Sauvage","Essaim d'insectes","Aide a personne en difficulte","Assistance a victime sans blessure",
+    "Intervention diverse / Autre","Neutralisation engin explosif","Alerte a la bombe","Soutien forces de l'ordre"
+  ]
+};
+
+/* ===== QUALIFICATIONS ===== */
+var qualCategories = {
+  cace:       { label:"CA / CE",    options:["CA INC","CA MEA","CA PPBE","CA SR","CA SSUAP","CA SMP","CA SPL","CE INC"] },
+  cod:        { label:"COD",        options:["COD1","COD2 PL","COD2 VL","COD6"] },
+  conducteur: { label:"Conducteur", options:["COND PL","COND VL"] },
+  equipier:   { label:"Equipier",   options:["EQ EA","EQ INC","EQ PPBE","EQ SR","EQ SSUAP","EQ SMP","EQ SPL"] },
+  operateur:  { label:"Operateur",  options:["OCO","OPTA"] },
+  divers:     { label:"Divers",     options:["ISP","CDG","CDC","CDS"] }
+};
+
+var slotQualMap = {
+  chefAgres:  ["cace","divers"],
+  conducteur: ["cod","conducteur","divers"],
+  chefEquipe: ["cace"],
+  equipier:   ["equipier","divers"]
+};
+
+var vehicleRequirements = {
+  "CCF-01":    {chefAgres:true, conducteur:true, chefEquipe:true, equipier:true},
+  "CCGC-01":   {chefAgres:true, conducteur:true},
+  "EPA-01":    {chefAgres:true, conducteur:true},
+  "FPT-01":    {chefAgres:true, conducteur:true, chefEquipe:true, equipier:true},
+  "FPT-02":    {chefAgres:true, conducteur:true, chefEquipe:true, equipier:true},
+  "FSR-01":    {chefAgres:true, conducteur:true, chefEquipe:true, equipier:true},
+  "SSSM-01":   {chefAgres:true, conducteur:true},
+  "VGRIMP-01": {chefAgres:true, conducteur:true},
+  "VL-01":     {conducteur:true, equipier:true},
+  "VLCG-01":   {conducteur:true},
+  "VLI-01":    {conducteur:true},
+  "VPL-01":    {chefAgres:true, conducteur:true},
+  "VSAV-01":   {chefAgres:true, conducteur:true},
+  "VSAV-02":   {chefAgres:true, conducteur:true}
+};
+
+var optionalVehicleSlots = {
+  "EPA-01":    {equipier:true},
+  "VSAV-01":   {equipier:true},
+  "VSAV-02":   {equipier:true},
+  "VLI-01":    {chefAgres:true}
+};
+
+var vehicleSlotQualRequired = {
+  "FPT-01":    {chefAgres:["CA INC"],      chefEquipe:["CE INC"],  conducteur:["COD1"],         equipier:["EQ INC"]},
+  "FPT-02":    {chefAgres:["CA INC"],      chefEquipe:["CE INC"],  conducteur:["COD1"],         equipier:["EQ INC"]},
+  "CCF-01":    {chefAgres:["CA INC"],      chefEquipe:["CE INC"],  conducteur:["COD2 PL"],      equipier:["EQ INC"]},
+  "CCGC-01":   {chefAgres:["CA INC"],                             conducteur:["COD2 PL"]},
+  "EPA-01":    {chefAgres:["CA MEA"],                              conducteur:["COD6"],          equipier:["EQ EA"]},
+  "FSR-01":    {chefAgres:["CA SR"],       chefEquipe:["CE INC"],  conducteur:["COD1"],         equipier:["EQ SR"]},
+  "VSAV-01":   {chefAgres:["CA SSUAP"],                           conducteur:["COD2 VL"],       equipier:["EQ SSUAP"]},
+  "VSAV-02":   {chefAgres:["CA SSUAP"],                           conducteur:["COD2 VL"],       equipier:["EQ SSUAP"]},
+  "VL-01":     {                                                   conducteur:["COD2 VL","COD2 PL"], equipier:["EQ SSUAP","ISP"]},
+  "SSSM-01":   {chefAgres:["ISP"],                                conducteur:["COD2 VL","COD1"]},
+  "VGRIMP-01": {chefAgres:["CA SMP"]},
+  "VPL-01":    {chefAgres:["CA SPL"]}
+};
+
+var vehicleSlotAllRequired = {
+  "VLCG-01":   {conducteur:["CDG","COD2 VL"]},
+  "VLI-01":    {conducteur:["ISP","COD2 VL"]},
+  "VGRIMP-01": {conducteur:["COD2 VL","EQ SMP"]},
+  "VPL-01":    {conducteur:["COD2 VL","EQ SPL"]}
+};
+
+var _piquetSlotDefs = [
+  {key:"chefAgres",  label:"Chef d'agres"},
+  {key:"conducteur", label:"Conducteur"},
+  {key:"chefEquipe", label:"Chef d'equipe"},
+  {key:"equipier",   label:"Equipier"}
+];
+
+/* ===== ETAT GLOBAL ===== */
+var user = null;
+var vehicules = [], interventions = {}, journal = {};
+var selectedVeh = null, selectedInterId = null;
+var selectedGuardVeh = null, guardPiquets = {};
+var effectifs = {}, presentsToday = {};
+var selectedQualPseudo = null;
+var departPollInterval = null, lastDepartId = null;
+var _currentPiquetSlot = null, _guardPiquetTemp = {};
+var _interFilter = "en_cours";
+
+/* ===== SURVEILLANCE FEUILLE DE GARDE ===== */
+var _lastGuardSheetTs = null;
+var _guardSheetPollInterval = null;
+
+function startGuardSheetPolling(){
+  _lastGuardSheetTs = localStorage.getItem("codisGuardSheetSent") || null;
+  if(_guardSheetPollInterval){clearInterval(_guardSheetPollInterval);}
+  _guardSheetPollInterval = setInterval(function(){
+    if(!user){return;}
+    var current = localStorage.getItem("codisGuardSheetSent");
+    if(current && current !== _lastGuardSheetTs){
+      _lastGuardSheetTs = current;
+      /* Recharger les piquets et rafraichir l'UI */
+      loadGuard();
+      /* Si on est sur la page CODIS, afficher la banniere */
+      var appEl = document.getElementById("app");
+      if(appEl && appEl.style.display === "grid"){
+        var banner = document.getElementById("gardeBanner");
+        if(banner){
+          banner.style.display = "block";
+          setTimeout(function(){banner.style.display="none";},5000);
+        }
+        showToast("Feuille de garde mise a jour par le stationnaire","info");
+      }
+      /* Si on est stationnaire, re-rendre les vehicules */
+      var guardEl = document.getElementById("guardPage");
+      if(guardEl && guardEl.style.display === "block"){
+        renderGuardVehicles();
+      }
+    }
+  },1500);
+}
+function stopGuardSheetPolling(){
+  if(_guardSheetPollInterval){clearInterval(_guardSheetPollInterval);_guardSheetPollInterval=null;}
+}
+
+/* ===== UTILITAIRES ===== */
+function valuesOf(obj){return Object.keys(obj).map(function(k){return obj[k];});}
+function escapeHtml(v){return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function formatTime(ts){return new Date(ts).toLocaleTimeString("fr-FR");}
+function formatDateTime(ts){var d=new Date(ts);return d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("fr-FR");}
+
+function updateClock(){document.getElementById("headerClock").textContent=new Date().toLocaleTimeString("fr-FR");}
+setInterval(updateClock,1000);updateClock();
+
+/* ===== TOAST ===== */
+function showToast(msg,type){
+  type=type||"info";
+  var icons={success:"✓",error:"✗",warning:"⚠",info:"ℹ"};
+  var t=document.createElement("div");
+  t.className="toast "+(type||"");
+  t.innerHTML="<span style='font-size:18px;flex-shrink:0'>"+icons[type]+"</span><span>"+escapeHtml(msg)+"</span>";
+  document.getElementById("toastContainer").appendChild(t);
+  setTimeout(function(){t.classList.add("hiding");setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);},3500);
+}
+
+/* ===== CONFIRM ===== */
+function showConfirm(title,text,onOk){
+  document.getElementById("confirmTitle").textContent=title;
+  document.getElementById("confirmText").textContent=text;
+  document.getElementById("confirmModal").style.display="flex";
+  var okBtn=document.getElementById("confirmOk");
+  var cancelBtn=document.getElementById("confirmCancel");
+  var cleanup=function(){document.getElementById("confirmModal").style.display="none";okBtn.onclick=null;cancelBtn.onclick=null;};
+  okBtn.onclick=function(){cleanup();onOk();};
+  cancelBtn.onclick=cleanup;
+}
+
+/* ===== IMPOSSIBLE ALERTE ===== */
+function showImpossibleAlert(msg){
+  document.getElementById("impossibleMsg").innerHTML=msg;
+  document.getElementById("impossibleAlert").style.display="flex";
+}
+function closeImpossibleAlert(){
+  document.getElementById("impossibleAlert").style.display="none";
+}
+
+/* ===== PERSISTENCE ===== */
+function saveData(){
+  localStorage.setItem("codisVeh",JSON.stringify(vehicules));
+  localStorage.setItem("codisInter",JSON.stringify(interventions));
+  localStorage.setItem("codisJournal",JSON.stringify(journal));
+  /* Sync Firebase */
+  pushAllVehToFirebase();
+}
+function getNextInterNumber(){
+  var n=parseInt(localStorage.getItem("codisNextInterNumber")||"1",10);
+  localStorage.setItem("codisNextInterNumber",String(n+1));
+  return n;
+}
+function loadEffectifs(){effectifs=JSON.parse(localStorage.getItem("codisEffectifs")||"{}");}
+function savePresents(){localStorage.setItem("codisPresents",JSON.stringify(presentsToday));}
+function loadPresents(){presentsToday=JSON.parse(localStorage.getItem("codisPresents")||"{}");}
+function loadData(){
+  vehicules=JSON.parse(localStorage.getItem("codisVeh")||"[]");
+  interventions=JSON.parse(localStorage.getItem("codisInter")||"{}");
+  journal=JSON.parse(localStorage.getItem("codisJournal")||"{}");
+  loadEffectifs();loadPresents();
+  defaultVehicules.forEach(function(b){if(!vehicules.some(function(v){return v.name===b.name;})){vehicules.push({name:b.name,status:b.status});}});
+  vehicules=vehicules.filter(function(v){return defaultVehicules.some(function(b){return b.name===v.name;});});
+  vehicules.sort(function(a,b){return a.name.localeCompare(b.name);});
+  saveData();
+}
+
+/* ===== EXPORT EFFECTIFS ===== */
+function exportEffectifs(){
+  var blob=new Blob([JSON.stringify(effectifs,null,2)],{type:"application/json"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="effectifs_codis.json";a.click();
+  showToast("Effectifs exportes","success");
+}
+function importEffectifs(input){
+  var file=input.files[0];if(!file){return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{effectifs=JSON.parse(e.target.result);localStorage.setItem("codisEffectifs",JSON.stringify(effectifs));renderEffectifs();showToast("Effectifs importes","success");}
+    catch(err){showToast("Fichier JSON invalide","error");}
+    input.value="";
+  };reader.readAsText(file);
+}
+function exportJournal(){
+  var list=valuesOf(journal).sort(function(a,b){return a.time-b.time;});
+  var text=list.map(function(j){return "["+formatDateTime(j.time)+"] ["+j.user+"] "+j.text;}).join("\n");
+  var blob=new Blob([text],{type:"text/plain"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="main_courante_"+new Date().toISOString().slice(0,10)+".txt";a.click();
+  showToast("Main courante exportee","success");
+}
+
+/* ===== QUALIFICATIONS ===== */
+function getAllQualsFlat(pseudo){
+  var data=effectifs[pseudo];if(!data){return [];}
+  var quals=data.qualifications||{};
+  var all=[];
+  Object.keys(quals).forEach(function(cat){(quals[cat]||[]).forEach(function(q){all.push(q);});});
+  return all;
+}
+
+function hasQualForSlot(pseudo,slotType,vehicleName){
+  var data=effectifs[pseudo];if(!data){return false;}
+  var allQuals=getAllQualsFlat(pseudo);
+
+  if(vehicleName&&vehicleSlotAllRequired[vehicleName]&&vehicleSlotAllRequired[vehicleName][slotType]){
+    var required=vehicleSlotAllRequired[vehicleName][slotType];
+    return required.every(function(q){return allQuals.indexOf(q)!==-1;});
+  }
+  if(vehicleName&&vehicleSlotQualRequired[vehicleName]&&vehicleSlotQualRequired[vehicleName][slotType]){
+    var opts=vehicleSlotQualRequired[vehicleName][slotType];
+    return opts.some(function(q){return allQuals.indexOf(q)!==-1;});
+  }
+  var acceptedCats=slotQualMap[slotType]||[];
+  var quals=data.qualifications||{};
+  return acceptedCats.some(function(cat){return quals[cat]&&quals[cat].length>0;});
+}
+
+function getQualsList(pseudo){
+  var data=effectifs[pseudo];if(!data){return [];}
+  var quals=data.qualifications||{};
+  var all=[];
+  Object.keys(qualCategories).forEach(function(cat){
+    var q=quals[cat]||[];
+    q.forEach(function(v){all.push({val:v,cat:cat});});
+  });
+  return all;
+}
+
+/* ===== AGENTS DISPONIBLES POUR UN DEPART ===== */
+/**
+ * Retourne les pseudos des agents presents ET non engages dans une intervention en cours.
+ * Un agent est considere engage si son pseudo figure dans les piquets d'un vehicule en statut actif (1-6,10).
+ */
+function getAgentsDisponiblesPourDepart(){
+  loadEffectifs();loadPresents();
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");
+  var agentsEnInter={};
+  vehicules.forEach(function(v){
+    var engaged=(v.status>=1&&v.status<=6)||v.status===10;
+    if(!engaged){return;}
+    var p=guardPiquets[v.name]||{};
+    Object.keys(p).forEach(function(slot){
+      if(p[slot]&&p[slot].trim()){agentsEnInter[p[slot].trim()]=true;}
+    });
+  });
+  return Object.keys(presentsToday).filter(function(ps){
+    return presentsToday[ps]&&effectifs[ps]&&!agentsEnInter[ps];
+  });
+}
+
+/**
+ * Affecte automatiquement les agents disponibles aux vehicules demandes pour un depart.
+ * Regles :
+ *   - Ne prend que les agents disponibles (non en intervention)
+ *   - Verifie les qualifications
+ *   - VSAV : essaie chef agres + conducteur + equipier (min 2 requis)
+ *   - Si un poste obligatoire ne peut etre pourvu sur aucun vehicule → retourne {success:false}
+ * Retourne {success:bool, message:string, nouvPiquets:{}, agentsUtilises:[]}
+ */
+function affecterAgentsAutoDepart(vehiculesStr){
+  var noms=vehiculesStr.split(/\s+/).filter(function(n){return !!n.trim();});
+  var dispos=getAgentsDisponiblesPourDepart();
+  var used={};
+  var nouvPiquets={};
+  var problemes=[];
+
+  /* On garde les piquets existants si l'agent est encore dispo */
+  noms.forEach(function(nom){
+    nouvPiquets[nom]={};
+    var existant=guardPiquets[nom]||{};
+    var slots=["chefAgres","conducteur","chefEquipe","equipier"];
+    slots.forEach(function(slot){
+      var agentExist=existant[slot]||"";
+      if(agentExist&&dispos.indexOf(agentExist)!==-1&&!used[agentExist]){
+        nouvPiquets[nom][slot]=agentExist;
+        used[agentExist]=true;
+      }
+    });
+  });
+
+  /* Combler les postes manquants */
+  var ordreSlots=["chefAgres","conducteur","chefEquipe","equipier"];
+  noms.forEach(function(nom){
+    var req=vehicleRequirements[nom]||{};
+    var opt=optionalVehicleSlots[nom]||{};
+    ordreSlots.forEach(function(slot){
+      var est=(req[slot]||opt[slot]);
+      if(!est){return;}
+      if(nouvPiquets[nom][slot]){return;}
+      /* Chercher un agent dispo qualifie */
+      var trouve=null;
+      for(var i=0;i<dispos.length;i++){
+        var ps=dispos[i];
+        if(used[ps]){continue;}
+        if(!hasQualForSlot(ps,slot,nom)){continue;}
+        trouve=ps;break;
+      }
+      if(trouve){nouvPiquets[nom][slot]=trouve;used[trouve]=true;}
+    });
+    /* Verifier postes obligatoires */
+    var req2=vehicleRequirements[nom]||{};
+    Object.keys(req2).forEach(function(slot){
+      if(!nouvPiquets[nom][slot]){
+        /* Pour VSAV : le minimum vital c'est chefAgres + conducteur */
+        var isVsav=(nom==="VSAV-01"||nom==="VSAV-02");
+        if(isVsav&&slot==="equipier"){return;} /* equipier VSAV est optionnel en extremis */
+        problemes.push(nom+" : poste "+slot+" non pourvu (aucun agent qualifie disponible)");
+      }
+    });
+  });
+
+  if(problemes.length>0){
+    return {
+      success:false,
+      message:"<b>Depart impossible — Manque de personnel :</b><br><br>"
+        +problemes.map(function(p){return "&#8226; "+escapeHtml(p);}).join("<br>")
+        +"<br><br><span style='color:#aeb7c2;font-size:13px'>Aucun agent qualifie disponible pour ces postes. Les agents en intervention ne peuvent pas etre retires.</span>"
+    };
+  }
+
+  var nbUtilises=Object.keys(used).length;
+  return {success:true,nouvPiquets:nouvPiquets,agentsUtilises:Object.keys(used),nbUtilises:nbUtilises};
+}
+
+/* ===== EFFECTIFS ===== */
+function saveEffectif(){
+  var prenom=document.getElementById("effectifPrenom").value.trim();
+  var pseudo=document.getElementById("effectifPseudo").value.trim();
+  var id=document.getElementById("effectifDiscordId").value.trim();
+  var type=document.getElementById("effectifType").value;
+  if(!pseudo||!id){showToast("Pseudo et ID Discord sont obligatoires","error");return;}
+  if(pseudo.charAt(0)!=="@"){pseudo="@"+pseudo;}
+  var existing=effectifs[pseudo]||{};
+  var defaultQuals={cace:[],cod:[],conducteur:[],equipier:[],operateur:[],divers:[]};
+  var existingQuals=existing.qualifications||{};
+  Object.keys(defaultQuals).forEach(function(k){if(!existingQuals[k]){existingQuals[k]=[];}});
+  effectifs[pseudo]={prenom:prenom,id:id.replace(/[<@>]/g,""),type:type,qualifications:existingQuals};
+  localStorage.setItem("codisEffectifs",JSON.stringify(effectifs));
+  document.getElementById("effectifPrenom").value="";
+  document.getElementById("effectifPseudo").value="";
+  document.getElementById("effectifDiscordId").value="";
+  document.getElementById("effectifType").value="SPV";
+  renderEffectifs();showToast("Effectif ajoute : "+pseudo,"success");
+}
+
+function deleteEffectif(pseudo){
+  showConfirm("Supprimer "+pseudo,"Cette action est irreversible.",function(){
+    delete effectifs[pseudo];delete presentsToday[pseudo];
+    localStorage.setItem("codisEffectifs",JSON.stringify(effectifs));savePresents();
+    renderEffectifs();showToast(pseudo+" supprime","warning");
+  });
+}
+
+function renderEffectifs(){
+  var box=document.getElementById("effectifList");box.innerHTML="";
+  var pseudos=Object.keys(effectifs).sort();
+  if(!pseudos.length){box.innerHTML="<div class='empty'>Aucun effectif enregistre.</div>";return;}
+  pseudos.forEach(function(pseudo){
+    var data=effectifs[pseudo];
+    var type=typeof data==="object"&&data.type?data.type:"SPV";
+    var quals=getQualsList(pseudo);
+    var card=document.createElement("div");card.className="effectif-card";
+    var qualTagsHtml="";
+    if(quals.length){
+      qualTagsHtml="<div class='qual-tags'>";
+      quals.forEach(function(q){qualTagsHtml+="<span class='qual-tag "+q.cat+"'>"+escapeHtml(q.val)+"</span>";});
+      qualTagsHtml+="</div>";
+    }else{qualTagsHtml="<div class='qual-tags'><span class='qual-tag none'>Aucune qualification</span></div>";}
+    card.innerHTML="<div class='effectif-card-header'>"
+      +"<div><span style='font-weight:bold'>"+escapeHtml(pseudo)+"</span> "
+      +"<span class='badge badge-"+type.toLowerCase()+"'>"+type+"</span></div>"
+      +"<div class='effectif-card-actions'>"
+      +"<button onclick='openQualPopup(\""+escapeHtml(pseudo)+"\")' style='background:#1a3a6b'>Qualifications</button>"
+      +"<button class='secondary' onclick='deleteEffectif(\""+escapeHtml(pseudo)+"\")' style='background:#3d0000'>Supprimer</button>"
+      +"</div></div>"+qualTagsHtml;
+    box.appendChild(card);
+  });
+}
+
+/* ===== POPUP QUALIFICATIONS ADMIN ===== */
+function openQualPopup(pseudo){
+  selectedQualPseudo=pseudo;
+  document.getElementById("qualPopupTitle").textContent="Qualifications — "+pseudo;
+  var data=effectifs[pseudo]||{};var quals=data.qualifications||{};
+  var html="";
+  Object.keys(qualCategories).forEach(function(cat){
+    var def=qualCategories[cat];var catQuals=quals[cat]||[];
+    html+="<div class='qual-section'><div class='qual-section-title'>"+def.label+"</div><div class='qual-checkbox-grid'>";
+    def.options.forEach(function(opt){
+      var checked=catQuals.indexOf(opt)!==-1?"checked":"";
+      html+="<label class='qual-checkbox-item'><input type='checkbox' data-cat='"+cat+"' value='"+escapeHtml(opt)+"' "+checked+"> "+escapeHtml(opt)+"</label>";
+    });
+    html+="</div></div>";
+  });
+  document.getElementById("qualSections").innerHTML=html;
+  document.getElementById("qualPopup").style.display="flex";
+}
+function saveQualPopup(){
+  if(!selectedQualPseudo){return;}
+  var checks=document.querySelectorAll("#qualSections input[type=checkbox]");
+  var quals={};Object.keys(qualCategories).forEach(function(k){quals[k]=[];});
+  checks.forEach(function(cb){if(cb.checked){quals[cb.dataset.cat].push(cb.value);}});
+  if(!effectifs[selectedQualPseudo]){return;}
+  effectifs[selectedQualPseudo].qualifications=quals;
+  localStorage.setItem("codisEffectifs",JSON.stringify(effectifs));
+  closeQualPopup();renderEffectifs();showToast("Qualifications enregistrees","success");
+}
+function closeQualPopup(){document.getElementById("qualPopup").style.display="none";selectedQualPseudo=null;}
+
+/* ===== PRESENCE ===== */
+function renderPresence(){
+  var box=document.getElementById("presenceList");box.innerHTML="";
+  loadEffectifs();loadPresents();
+  var pseudos=Object.keys(effectifs).sort();
+  if(!pseudos.length){box.innerHTML="<div class='empty'>Aucun effectif. Demandez a l'Admin d'en ajouter.</div>";return;}
+  var nbPresents=0;
+  pseudos.forEach(function(pseudo){
+    var data=effectifs[pseudo];
+    var type=typeof data==="object"&&data.type?data.type:"SPV";
+    var isPresent=!!presentsToday[pseudo];if(isPresent)nbPresents++;
+    var dp=(data.prenom&&data.prenom.trim())?data.prenom.trim():pseudo.replace("@","");
+    var item=document.createElement("div");
+    item.className="presence-item"+(isPresent?" present":"");
+    item.innerHTML="<div><div class='presence-name'><span class='presence-name-clickable' onclick='openAgentQualPopup(\""+escapeHtml(pseudo)+"\")'>"+escapeHtml(dp)+"</span> <span class='badge badge-"+type.toLowerCase()+"'>"+type+"</span></div></div>"
+      +"<button class='presence-toggle"+(isPresent?" active":"")+"' onclick='togglePresent(\""+escapeHtml(pseudo)+"\")'>"+(isPresent?"Present":"Absent")+"</button>";
+    box.appendChild(item);
+  });
+  document.getElementById("presenceCountBadge").textContent=nbPresents+" present"+(nbPresents>1?"s":"");
+}
+function togglePresent(pseudo){presentsToday[pseudo]=!presentsToday[pseudo];savePresents();renderPresence();renderGuardVehicles();}
+function resetPresences(){showConfirm("Reset presences","Remettre tous les agents a Absent ?",function(){presentsToday={};savePresents();renderPresence();renderGuardVehicles();showToast("Presences remises a zero","warning");});}
+function resetPiquets(){showConfirm("Reset piquets","Effacer tous les piquets de garde ?",function(){guardPiquets={};localStorage.setItem("codisGuardPiquets",JSON.stringify(guardPiquets));renderGuardVehicles();showToast("Piquets remis a zero","warning");});}
+
+/* ===== AGENT QUAL POPUP STATIONNAIRE ===== */
+function openAgentQualPopup(pseudo){
+  var data=effectifs[pseudo]||{};
+  var prenom=(data.prenom&&data.prenom.trim())?data.prenom.trim():pseudo.replace("@","");
+  document.getElementById("agentQualPopupTitle").textContent="Qualifications — "+prenom;
+  var agentQuals=data.qualifications||{};
+  var body=document.getElementById("agentQualPopupBody");body.innerHTML="";
+  var colOrder=[
+    {catKey:"cace",label:"CA / CE"},{catKey:"cod",label:"COD"},{catKey:"conducteur",label:"Conducteur"},
+    {catKey:"equipier",label:"Equipier"},{catKey:"operateur",label:"Operateur"},{catKey:"divers",label:"Divers"}
+  ];
+  var grid=document.createElement("div");grid.className="qual-col-grid";
+  colOrder.forEach(function(col){
+    var all=qualCategories[col.catKey]?qualCategories[col.catKey].options:[];
+    var has=agentQuals[col.catKey]||[];
+    var hasCount=has.length;
+    var block=document.createElement("div");block.className="qual-col-block";block.setAttribute("data-expanded","0");
+    var headerHtml="<div class='qual-col-header'><span>"+col.label+"</span>"+(hasCount?"<span class='qual-count'>"+hasCount+"</span>":"<span style='color:#555;font-size:11px'>0</span>")+"</div>";
+    var detailHtml="<div class='qual-col-detail'>";
+    if(!all.length){detailHtml+="<div class='qual-col-empty'>—</div>";}
+    else{all.forEach(function(opt){var owned=has.indexOf(opt)!==-1;detailHtml+="<div class='qual-col-tag"+(owned?" has":"")+"'>"+escapeHtml(opt)+"</div>";});}
+    detailHtml+="</div>";
+    var summaryHtml="<div class='qual-col-summary' style='font-size:12px;color:#aeb7c2;margin-top:4px'>";
+    if(hasCount===0){summaryHtml+="<span style='color:#555;font-style:italic'>Aucune</span>";}
+    else{summaryHtml+=has.map(function(q){return "<span style='color:#c8d0d8'>"+escapeHtml(q)+"</span>";}).join(", ");}
+    summaryHtml+="</div>";
+    block.innerHTML=headerHtml+summaryHtml+detailHtml;
+    block.addEventListener("click",function(){
+      var exp=block.getAttribute("data-expanded")==="1";
+      block.setAttribute("data-expanded",exp?"0":"1");block.classList.toggle("expanded",!exp);
+      var s=block.querySelector(".qual-col-summary");if(s)s.style.display=exp?"block":"none";
+    });
+    grid.appendChild(block);
+  });
+  body.appendChild(grid);
+  document.getElementById("agentQualPopup").style.display="flex";
+}
+function closeAgentQualPopup(){document.getElementById("agentQualPopup").style.display="none";}
+
+/* ===== GUARD VEHICLES ===== */
+function loadGuard(){guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");}
+
+function vehiculeEstComplet(nomVeh){
+  var p=guardPiquets[nomVeh]||{};
+  var req=vehicleRequirements[nomVeh]||{};
+  return Object.keys(req).every(function(slot){return p[slot]&&p[slot].trim();});
+}
+
+function renderGuardVehicles(){
+  var box=document.getElementById("guardVehicleList");box.innerHTML="";
+  loadEffectifs();
+  defaultVehicules.forEach(function(dv){
+    var p=guardPiquets[dv.name]||{};
+    var complet=vehiculeEstComplet(dv.name);
+    var req=vehicleRequirements[dv.name]||{};
+    var opt=optionalVehicleSlots[dv.name]||{};
+    var reqSlots=Object.keys(req);
+    var filled=reqSlots.filter(function(s){return p[s]&&p[s].trim();}).length;
+    var card=document.createElement("div");
+    card.className="guard-vehicle-card "+(complet?"complet":"incomplet");
+    var slotHtml="";
+    _piquetSlotDefs.forEach(function(s){
+      if(!req[s.key]&&!opt[s.key]){return;}
+      var val=p[s.key]||"";
+      var d=effectifs[val]||{};
+      var dispVal=val?((d.prenom&&d.prenom.trim())?d.prenom.trim()+" ("+val+")":val):"—";
+      var isOpt=!req[s.key]&&opt[s.key];
+      slotHtml+="<span style='font-size:12px;color:"+(isOpt?"#888":"#aeb7c2")+"'>"+s.label+(isOpt?" <span style='font-size:10px'>(fac.)</span>":"")
+        +": <b style='color:"+(val?"#f4f4f4":"#555")+"'>"+escapeHtml(dispVal)+"</b></span><br>";
+    });
+    card.innerHTML="<div class='veh-top'><span>"+dv.name+"</span>"
+      +"<span style='font-size:12px;color:"+(complet?"#00c853":"#ff9800")+"'>"+(complet?"COMPLET":filled+"/"+reqSlots.length)+"</span></div>"
+      +(slotHtml?"<div style='margin-top:6px'>"+slotHtml+"</div>":"");
+    card.onclick=function(){openGuardPopup(dv.name);};
+    box.appendChild(card);
+  });
+}
+
+/* ===== PIQUET POPUP ===== */
+function renderPiquetSlots(){
+  var req=vehicleRequirements[selectedGuardVeh]||{};
+  var opt=optionalVehicleSlots[selectedGuardVeh]||{};
+  var allReq=vehicleSlotAllRequired[selectedGuardVeh]||{};
+  var box=document.getElementById("piquetSlots");box.innerHTML="";
+
+  if(Object.keys(allReq).length>0){
+    Object.keys(allReq).forEach(function(slot){
+      var slotDef=_piquetSlotDefs.filter(function(s){return s.key===slot;})[0];
+      var note=document.createElement("div");
+      note.className="piquet-allreq-note";
+      note.textContent="⚠ "+( slotDef?slotDef.label:slot)+" : l'agent doit avoir TOUTES ces qualifs : "+allReq[slot].join(" + ");
+      box.appendChild(note);
+    });
+  }
+
+  _piquetSlotDefs.forEach(function(s){
+    if(!req[s.key]){return;}
+    var val=_guardPiquetTemp[s.key]||"";
+    var isEmpty=!val.trim();
+    var d=effectifs[val]||{};
+    var dispVal=isEmpty?"Non assigne":((d.prenom&&d.prenom.trim())?d.prenom.trim():val.replace("@",""));
+    var card=document.createElement("div");card.className="piquet-slot-card";
+    card.innerHTML="<span class='piquet-slot-label'>"+s.label+"</span>"
+      +"<span class='piquet-slot-value"+(isEmpty?" empty":"")+"'>"+escapeHtml(dispVal)+"</span>"
+      +"<div class='piquet-slot-actions'>"
+      +"<button class='piquet-slot-btn' data-slot='"+s.key+"'>"+(isEmpty?"Choisir":"Changer")+"</button>"
+      +(!isEmpty?"<button class='piquet-slot-clear' data-slot='"+s.key+"'>X</button>":"")
+      +"</div>";
+    card.querySelector(".piquet-slot-btn").addEventListener("click",function(){openSlotSelection(this.dataset.slot);});
+    var clrBtn=card.querySelector(".piquet-slot-clear");
+    if(clrBtn){clrBtn.addEventListener("click",function(){clearSlot(this.dataset.slot);});}
+    box.appendChild(card);
+  });
+
+  if(Object.keys(opt).length>0){
+    var sep=document.createElement("div");sep.className="piquet-optional-sep";sep.textContent="Postes facultatifs";
+    box.appendChild(sep);
+    _piquetSlotDefs.forEach(function(s){
+      if(!opt[s.key]){return;}
+      var val=_guardPiquetTemp[s.key]||"";
+      var isEmpty=!val.trim();
+      var d=effectifs[val]||{};
+      var dispVal=isEmpty?"Non assigne":((d.prenom&&d.prenom.trim())?d.prenom.trim():val.replace("@",""));
+      var card=document.createElement("div");card.className="piquet-slot-card";card.style.opacity="0.8";
+      card.innerHTML="<span class='piquet-slot-label' style='color:#888'>"+s.label+" <span style='font-size:10px'>(fac.)</span></span>"
+        +"<span class='piquet-slot-value"+(isEmpty?" empty":"")+"'>"+escapeHtml(dispVal)+"</span>"
+        +"<div class='piquet-slot-actions'>"
+        +"<button class='piquet-slot-btn' data-slot='"+s.key+"'>"+(isEmpty?"Choisir":"Changer")+"</button>"
+        +(!isEmpty?"<button class='piquet-slot-clear' data-slot='"+s.key+"'>X</button>":"")
+        +"</div>";
+      card.querySelector(".piquet-slot-btn").addEventListener("click",function(){openSlotSelection(this.dataset.slot);});
+      var clrBtn=card.querySelector(".piquet-slot-clear");
+      if(clrBtn){clrBtn.addEventListener("click",function(){clearSlot(this.dataset.slot);});}
+      box.appendChild(card);
+    });
+  }
+
+  if(!box.children.length){box.innerHTML="<div class='empty'>Aucun poste requis.</div>";}
+  document.getElementById("piquetAgentList").style.display="none";
+  document.getElementById("piquetPopupBtns").style.display="flex";
+}
+
+function openSlotSelection(slotKey){
+  _currentPiquetSlot=slotKey;
+  var slotDef=_piquetSlotDefs.filter(function(s){return s.key===slotKey;})[0];
+  var slotLabel=slotDef?slotDef.label:slotKey;
+  loadEffectifs();loadPresents();
+
+  var globallyAssigned={};
+  Object.keys(guardPiquets).forEach(function(veh){
+    if(veh===selectedGuardVeh){return;}
+    var p2=guardPiquets[veh]||{};
+    Object.keys(p2).forEach(function(slot){if(p2[slot]&&p2[slot].trim()){globallyAssigned[p2[slot].trim()]=true;}});
+  });
+
+  var taken=_piquetSlotDefs
+    .filter(function(s){return s.key!==slotKey;})
+    .map(function(s){return _guardPiquetTemp[s.key]||"";})
+    .filter(function(v){return !!v.trim();});
+
+  var available=Object.keys(presentsToday)
+    .filter(function(ps){
+      return presentsToday[ps]&&effectifs[ps]
+        &&taken.indexOf(ps)===-1
+        &&!globallyAssigned[ps]
+        &&hasQualForSlot(ps,slotKey,selectedGuardVeh);
+    })
+    .sort(function(a,b){
+      var da=effectifs[a]||{};var db=effectifs[b]||{};
+      var na=(da.prenom&&da.prenom.trim())?da.prenom.trim():a;
+      var nb=(db.prenom&&db.prenom.trim())?db.prenom.trim():b;
+      return na.localeCompare(nb);
+    });
+
+  document.getElementById("piquetAgentListLabel").textContent=slotLabel+" — Choisir :";
+  var chipsBox=document.getElementById("piquetAgentChips");chipsBox.innerHTML="";
+  if(!available.length){
+    chipsBox.innerHTML="<div style='color:#666;font-size:13px;padding:8px 0'>Aucun agent present, qualifie et disponible.</div>";
+  }else{
+    available.forEach(function(ps){
+      var d=effectifs[ps]||{};
+      var dn=(d.prenom&&d.prenom.trim())?d.prenom.trim():ps.replace("@","");
+      var allQuals=getAllQualsFlat(ps);
+      var chip=document.createElement("div");chip.className="piquet-agent-item";
+      chip.innerHTML="<div><div class='piquet-agent-name'>"+escapeHtml(dn)+"</div>"
+        +"<div style='font-size:11px;color:#aeb7c2'>"+escapeHtml(ps)
+        +(allQuals.length?" — "+allQuals.slice(0,4).map(escapeHtml).join(", ")+(allQuals.length>4?"…":""):"")+"</div></div>"
+        +"<span style='color:#69f0ae;font-size:20px'>&#10003;</span>";
+      chip.addEventListener("click",(function(p){return function(){selectPiquetAgent(p);};})(ps));
+      chipsBox.appendChild(chip);
+    });
+  }
+  document.getElementById("piquetAgentList").style.display="block";
+  document.getElementById("piquetPopupBtns").style.display="none";
+}
+
+function selectPiquetAgent(pseudo){if(_currentPiquetSlot){_guardPiquetTemp[_currentPiquetSlot]=pseudo;}_currentPiquetSlot=null;renderPiquetSlots();}
+function clearSlot(slotKey){_guardPiquetTemp[slotKey]="";if(_currentPiquetSlot===slotKey){_currentPiquetSlot=null;}renderPiquetSlots();}
+function closePiquetAgentList(){_currentPiquetSlot=null;renderPiquetSlots();}
+
+function openGuardPopup(veh){
+  selectedGuardVeh=veh;loadEffectifs();loadPresents();
+  var data=guardPiquets[veh]||{};
+  _guardPiquetTemp={chefAgres:data.chefAgres||"",conducteur:data.conducteur||"",chefEquipe:data.chefEquipe||"",equipier:data.equipier||""};
+  _currentPiquetSlot=null;
+  document.getElementById("guardPopupTitle").textContent="Piquets — "+veh;
+  renderPiquetSlots();
+  document.getElementById("guardPopup").style.display="flex";
+}
+function closeGuardPopup(){document.getElementById("guardPopup").style.display="none";}
+function saveSelectedGuard(){
+  guardPiquets[selectedGuardVeh]={chefAgres:_guardPiquetTemp.chefAgres||"",conducteur:_guardPiquetTemp.conducteur||"",chefEquipe:_guardPiquetTemp.chefEquipe||"",equipier:_guardPiquetTemp.equipier||""};
+  localStorage.setItem("codisGuardPiquets",JSON.stringify(guardPiquets));
+  closeGuardPopup();renderGuardVehicles();showToast("Piquets enregistres pour "+selectedGuardVeh,"success");
+}
+
+/* ===== AFFECTATION AUTOMATIQUE (GARDE) ===== */
+function affecterAutomatiquement(){
+  loadEffectifs();loadPresents();
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");
+  var slots=["chefAgres","conducteur","chefEquipe","equipier"];
+  var assigned={};
+  defaultVehicules.forEach(function(v){
+    var p=guardPiquets[v.name]||{};
+    slots.forEach(function(slot){if(p[slot]&&p[slot].trim()){assigned[p[slot].trim()]=true;}});
+  });
+  var nbAffectes=0;
+  defaultVehicules.forEach(function(v){
+    if(!guardPiquets[v.name]){guardPiquets[v.name]={};}
+    var p=guardPiquets[v.name];
+    var req=vehicleRequirements[v.name]||{};
+    var opt=optionalVehicleSlots[v.name]||{};
+    var allSlots={};
+    Object.keys(req).forEach(function(k){allSlots[k]=true;});
+    Object.keys(opt).forEach(function(k){allSlots[k]=true;});
+    slots.forEach(function(slot){
+      if(!allSlots[slot]){return;}
+      if(p[slot]&&p[slot].trim()){return;}
+      var presentPseudos=Object.keys(presentsToday).filter(function(ps){return presentsToday[ps];});
+      var candidate=null;
+      for(var i=0;i<presentPseudos.length;i++){
+        var ps=presentPseudos[i];
+        if(assigned[ps]){continue;}
+        if(!hasQualForSlot(ps,slot,v.name)){continue;}
+        candidate=ps;break;
+      }
+      if(candidate){p[slot]=candidate;assigned[candidate]=true;nbAffectes++;}
+    });
+  });
+  localStorage.setItem("codisGuardPiquets",JSON.stringify(guardPiquets));
+  renderGuardVehicles();
+  if(nbAffectes>0){showToast(nbAffectes+" poste(s) affecte(s)","success");}
+  else{showToast("Aucun poste supplementaire a pourvoir","warning");}
+}
+
+/* ===== DISCORD ===== */
+function resolveDiscordName(value){
+  var text=String(value||"").trim();if(!text){return "";}
+  if(text.substring(0,2)==="<@"){return text;}
+  if(effectifs[text]){var data=effectifs[text];var discordId=typeof data==="object"?data.id:data;return "<@"+discordId+">";}
+  return text;
+}
+
+function buildEffectifHtml(vehiculesTexte){
+  loadEffectifs();loadPresents();
+  var noms=vehiculesTexte.split(/\s+/).filter(function(n){return !!n.trim();});
+  var html="";var alreadyUsed={};
+  noms.forEach(function(nom){
+    var p=guardPiquets[nom]||{};
+    var req=vehicleRequirements[nom]||{};
+    var opt=optionalVehicleSlots[nom]||{};
+    var allSlotKeys=[];
+    _piquetSlotDefs.forEach(function(s){if(req[s.key]||opt[s.key]){allSlotKeys.push(s);}});
+    if(!allSlotKeys.length){return;}
+    html+="<div style='margin-bottom:12px'><b style='color:#ff5252;font-size:14px'>"+escapeHtml(nom)+"</b>";
+    allSlotKeys.forEach(function(s){
+      var piquet=p[s.key]||"";
+      var resolved=piquet&&!alreadyUsed[piquet]?piquet:"";
+      if(resolved){alreadyUsed[resolved]=true;}
+      var isOpt=!req[s.key];
+      if(isOpt&&!resolved){return;}
+      var d2=effectifs[resolved]||{};
+      var displayName=resolved?((d2.prenom&&d2.prenom.trim()?d2.prenom.trim()+" ":"")+escapeHtml(resolved)):"Non renseigne";
+      var color=resolved?"#ccc":"#555";
+      html+="<div style='margin-left:10px;font-size:13px;color:"+color+";margin-top:2px'>"
+        +"<span style='color:#aaa;min-width:115px;display:inline-block'>"+s.label+(isOpt?" (fac.)":"")+" :</span> "
+        +displayName+"</div>";
+    });
+    html+="</div>";
+  });
+  return html;
+}
+
+function getEffectifWebhook(vehiculesTexte){
+  loadEffectifs();
+  var noms=vehiculesTexte.split(/\s+/).filter(function(n){return !!n.trim();});
+  var lignes=[];var alreadyUsed={};
+  noms.forEach(function(nom){
+    var p=guardPiquets[nom]||{};
+    var req=vehicleRequirements[nom]||{};
+    var opt=optionalVehicleSlots[nom]||{};
+    var allSlotKeys=[];
+    _piquetSlotDefs.forEach(function(s){if(req[s.key]||opt[s.key]){allSlotKeys.push(s);}});
+    if(!allSlotKeys.length){return;}
+    var bloc="**"+nom+" :**\n";
+    allSlotKeys.forEach(function(s){
+      var piquet=p[s.key]||"";
+      var resolved=piquet&&!alreadyUsed[piquet]?piquet:"";
+      if(resolved){alreadyUsed[resolved]=true;}
+      var isOpt=!req[s.key];
+      if(isOpt&&!resolved){return;}
+      bloc+=s.label+(isOpt?" (fac.)":"")+" : "+(resolved?resolveDiscordName(resolved):"Non renseigne")+"\n";
+    });
+    lignes.push(bloc.trim());
+  });
+  return lignes.join("\n\n");
+}
+
+function sendDepartWebhook(inter){
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");
+  fetch(DISCORD_WEBHOOK_URL,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      content:"**NOUVEAU DEPART CODIS**\n**Numero :** "+inter.id+"\n**Type :** "+inter.type+"\n**Precision :** "+inter.precision
+        +"\n**Adresse :** "+inter.adresse+"\n**Moyens :** "+inter.vehicules+"\n**Observations :** "+(inter.obs||"Aucune")
+        +"\n**Cree par :** "+inter.createdBy+"\n\n**EFFECTIF ENGAGE :**\n"+getEffectifWebhook(inter.vehicules),
+      allowed_mentions:{parse:["users"]}
+    })
+  }).then(function(r){
+    if(r.ok){showToast("Depart envoye sur Discord","success");}
+    else{addJournal("Erreur webhook Discord");showToast("Erreur envoi Discord","error");}
+  }).catch(function(){addJournal("Erreur webhook Discord");showToast("Erreur reseau Discord","error");});
+}
+
+function sendFeuilleDGardeWebhook(){
+  var pseudo=document.getElementById("guardStationnaire").value.trim();
+  var statusDiv=document.getElementById("guardSendStatus");statusDiv.style.display="none";
+  if(!pseudo){showToast("Renseigne le pseudo du stationnaire","error");return;}
+  loadEffectifs();
+  var discordMention="";
+  var pKey=pseudo.charAt(0)==="@"?pseudo:"@"+pseudo;
+  if(effectifs[pKey]){var data=effectifs[pKey];discordMention="<@"+(typeof data==="object"?data.id:data)+">";}
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");
+  var lignes=["**FEUILLE DE GARDE — SDIS LUTECE BSPP**"];
+  defaultVehicules.forEach(function(v){
+    var p=guardPiquets[v.name]||{};
+    var complet=vehiculeEstComplet(v.name);
+    var bloc="\n**"+v.name+" :** ["+(complet?"COMPLET":"INCOMPLET")+"]";
+    var hasAny=false;
+    _piquetSlotDefs.forEach(function(s){
+      var req=vehicleRequirements[v.name]||{};
+      var opt=optionalVehicleSlots[v.name]||{};
+      if(!req[s.key]&&!opt[s.key]){return;}
+      var val=p[s.key]||"";
+      var isOpt=!req[s.key];
+      if(isOpt&&!val){return;}
+      bloc+="\n  "+s.label+(isOpt?" (fac.)":"")+" : "+(val||"Non renseigne");
+      hasAny=true;
+    });
+    if(!hasAny){bloc+=" Aucun piquet";}
+    lignes.push(bloc);
+  });
+  var content=(discordMention?discordMention+"\n":"")+lignes.join("");
+  fetch(DISCORD_WEBHOOK_URL,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({content:content,allowed_mentions:{parse:["users"]}})
+  }).then(function(r){
+    if(r.ok){
+      showToast("Feuille envoyee sur Discord !","success");
+      statusDiv.textContent="Feuille envoyee sur Discord !";
+      statusDiv.style.cssText="display:block;background:#0d3d1a;color:#69f0ae;border:1px solid #00c853;border-radius:6px;padding:8px 10px;font-size:13px;text-align:center;margin-bottom:10px";
+      document.getElementById("guardStationnaire").value="";
+      /* Notifier les autres onglets (CODIS) que la feuille de garde a ete mise a jour */
+      localStorage.setItem("codisGuardSheetSent",String(Date.now()));
+      renderGuardVehicles();
+    }else{
+      showToast("Erreur lors de l'envoi Discord","error");
+      statusDiv.textContent="Erreur lors de l'envoi.";
+      statusDiv.style.cssText="display:block;background:#5a0000;color:#ffaaaa;border:1px solid #ff4444;border-radius:6px;padding:8px 10px;font-size:13px;text-align:center;margin-bottom:10px";
+    }
+  }).catch(function(){showToast("Erreur reseau","error");});
+}
+
+/* ===== REMISE ===== */
+function renderRemise(){
+  var grid=document.getElementById("remiseGrid");grid.innerHTML="";loadData();
+  vehicules.forEach(function(v){
+    var card=document.createElement("div");
+    var isEngaged=v.status>=1&&v.status<=6||v.status===10;
+    var isDispo=v.status===7;
+    card.className="remise-veh-card "+(isEngaged?"status-engaged":isDispo?"status-dispo":"status-indispo");
+    var interBadge=v.intervention?"<div class='remise-inter-badge'>"+escapeHtml(v.intervention.id||"EN INTER")+"</div>":"";
+    card.innerHTML="<div class='remise-veh-name'>"+escapeHtml(v.name)+"</div>"
+      +"<div class='remise-veh-status status-"+v.status+"'>"+escapeHtml(statusLabels[v.status]||"Inconnu")+"</div>"
+      +interBadge+(v.intervention?"<div class='remise-veh-meta' style='margin-top:4px'>"+escapeHtml(v.intervention.type||"")+"</div>":"");
+    card.onclick=function(){openRemiseVehDetail(v);};
+    grid.appendChild(card);
+  });
+}
+
+function openRemiseVehDetail(veh){
+  document.getElementById("remiseInterTitle").textContent=veh.name+" — "+statusLabels[veh.status];
+  var html="<div class='detail-line'><b>Statut :</b> <span class='status-"+veh.status+"'>"+escapeHtml(statusLabels[veh.status])+"</span></div>";
+  if(veh.intervention){
+    var i=veh.intervention;
+    html+="<div style='margin-top:12px;padding:10px;background:#111417;border-radius:8px;border:1px solid #303740'>"
+      +"<div style='font-size:13px;font-weight:bold;color:#ff9800;margin-bottom:8px'>Intervention en cours</div>"
+      +"<div class='detail-line'><b>Numero :</b> "+escapeHtml(i.id)+"</div>"
+      +"<div class='detail-line'><b>Type :</b> "+escapeHtml(i.type)+"</div>"
+      +"<div class='detail-line'><b>Adresse :</b> "+escapeHtml(i.adresse||"")+"</div>"
+      +"<div class='detail-line'><b>Moyens :</b> "+escapeHtml(i.vehicules||"")+"</div>"
+      +"</div>";
+  }
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");loadEffectifs();
+  html+="<div style='margin-top:12px'><div style='font-size:12px;color:#ff9800;font-weight:bold;margin-bottom:6px'>PIQUET</div>";
+  _piquetSlotDefs.forEach(function(s){
+    var req=vehicleRequirements[veh.name]||{};
+    var opt=optionalVehicleSlots[veh.name]||{};
+    if(!req[s.key]&&!opt[s.key]){return;}
+    var p2=guardPiquets[veh.name]||{};
+    var val=p2[s.key]||"";
+    var isOpt=!req[s.key];
+    var d=effectifs[val]||{};
+    var dn=val?((d.prenom&&d.prenom.trim()?d.prenom.trim()+" ":"")+val):"<span style='color:#555;font-style:italic'>Non renseigne</span>";
+    html+="<div class='detail-line'><b>"+s.label+(isOpt?" (fac.)":"")+" :</b> "+dn+"</div>";
+  });
+  html+="</div>";
+  document.getElementById("remiseInterContent").innerHTML=html;
+  document.getElementById("remiseInterPopup").style.display="flex";
+}
+function closeRemiseInterPopup(){document.getElementById("remiseInterPopup").style.display="none";}
+
+/* ===== POLLING DEPART ===== */
+function startDepartPolling(){
+  lastDepartId=null;
+  var _init=JSON.parse(localStorage.getItem("codisLatestDepart")||"null");
+  if(_init){lastDepartId=_init.id;}
+  departPollInterval=setInterval(function(){
+    if(!user||(user.role!=="STATIONNAIRE"&&user.role!=="CHEF")){return;}
+    var d=JSON.parse(localStorage.getItem("codisLatestDepart")||"null");
+    if(d&&d.id!==lastDepartId){lastDepartId=d.id;showDepartAlert(d);}
+  },1000);
+}
+function stopDepartPolling(){if(departPollInterval){clearInterval(departPollInterval);departPollInterval=null;}}
+
+var _departCountdownTimer=null;
+
+function showDepartAlert(d){
+  loadEffectifs();
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");
+  document.getElementById("departAlertBody").innerHTML=
+    "<div class='depart-alert-row'><b>Numero :</b><span>"+escapeHtml(d.id)+"</span></div>"
+    +"<div class='depart-alert-row'><b>Type :</b><span>"+escapeHtml(d.type)+"</span></div>"
+    +"<div class='depart-alert-row'><b>Precision :</b><span>"+escapeHtml(d.precision)+"</span></div>"
+    +"<div class='depart-alert-row'><b>Adresse :</b><span>"+escapeHtml(d.adresse)+"</span></div>"
+    +"<div class='depart-alert-row'><b>Moyens :</b><span>"+escapeHtml(d.vehicules)+"</span></div>"
+    +"<div class='depart-alert-row'><b>Observations :</b><span>"+(d.obs?escapeHtml(d.obs):"Aucune")+"</span></div>"
+    +(d.vehicules?"<div class='depart-alert-effectif'>"+buildEffectifHtml(d.vehicules)+"</div>":"");
+  document.getElementById("departAlert").style.display="flex";
+  var secs=5;var cdEl=document.getElementById("departAlertCountdown");
+  if(cdEl)cdEl.textContent="Envoi Discord dans "+secs+" seconde(s)...";
+  if(_departCountdownTimer){clearInterval(_departCountdownTimer);}
+  _departCountdownTimer=setInterval(function(){
+    secs--;
+    if(cdEl){if(secs>0){cdEl.textContent="Envoi Discord dans "+secs+" seconde(s)...";}else{cdEl.textContent="Depart envoye sur Discord.";cdEl.style.color="#69f0ae";}}
+    if(secs<=0){clearInterval(_departCountdownTimer);_departCountdownTimer=null;}
+  },1000);
+}
+function ouvrirFeuilleGarde(){closeDepartAlert();hidePages();document.getElementById("guardPage").style.display="block";loadGuard();renderPresence();}
+function closeDepartAlert(){document.getElementById("departAlert").style.display="none";if(_departCountdownTimer){clearInterval(_departCountdownTimer);_departCountdownTimer=null;}}
+
+/* ===== AUTOCOMPLETE VEHICULES ===== */
+var _selectedVehs=[];
+function onVehInput(){
+  var val=(document.getElementById("vehiculesInter").value||"").trim();
+  var list=document.getElementById("vehAutocomplete");
+  if(!val){list.classList.remove("open");return;}
+  var lastWord=val.split(/\s+/).pop().toLowerCase();
+  if(!lastWord){list.classList.remove("open");return;}
+  var matches=defaultVehicules.filter(function(v){return v.name.toLowerCase().indexOf(lastWord)!==-1&&_selectedVehs.indexOf(v.name)===-1;});
+  if(!matches.length){list.classList.remove("open");return;}
+  list.innerHTML="";
+  matches.forEach(function(v){
+    var item=document.createElement("div");item.className="autocomplete-item";
+    item.innerHTML=v.name+" <span style='color:#aeb7c2;font-size:11px'>"+statusLabels[v.status]+"</span>";
+    item.onclick=function(){selectVehAutocomplete(v.name);};
+    list.appendChild(item);
+  });
+  list.classList.add("open");
+}
+function selectVehAutocomplete(name){
+  if(_selectedVehs.indexOf(name)===-1){_selectedVehs.push(name);}
+  var parts=(document.getElementById("vehiculesInter").value||"").trim().split(/\s+/);
+  parts.pop();parts.push(name);
+  document.getElementById("vehiculesInter").value=parts.join(" ")+" ";
+  document.getElementById("vehAutocomplete").classList.remove("open");
+  renderVehTags();document.getElementById("vehiculesInter").focus();
+}
+function renderVehTags(){
+  var box=document.getElementById("vehSelectedTags");box.innerHTML="";
+  _selectedVehs.forEach(function(name){
+    var tag=document.createElement("span");
+    tag.style.cssText="background:#a90000;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;cursor:pointer";
+    tag.textContent=name+" ✕";
+    tag.onclick=function(){_selectedVehs.splice(_selectedVehs.indexOf(name),1);renderVehTags();syncVehInput();};
+    box.appendChild(tag);
+  });
+}
+function syncVehInput(){document.getElementById("vehiculesInter").value=_selectedVehs.join(" ");}
+document.addEventListener("click",function(e){
+  if(!e.target.closest(".autocomplete-wrap")){
+    document.getElementById("vehAutocomplete").classList.remove("open");
+    var val=(document.getElementById("vehiculesInter").value||"").trim();
+    if(val){val.split(/\s+/).forEach(function(n){if(n&&defaultVehicules.some(function(v){return v.name===n;})&&_selectedVehs.indexOf(n)===-1){_selectedVehs.push(n);}});renderVehTags();}
+  }
+});
+
+/* ===== CODIS - INTERVENTIONS ===== */
+function updatePrecis(){
+  var type=document.getElementById("type").value;
+  var sel=document.getElementById("precision");
+  sel.innerHTML="<option value=''>Precision</option>";
+  if(!precisions[type]){return;}
+  precisions[type].forEach(function(p){var o=document.createElement("option");o.value=p;o.textContent=p;sel.appendChild(o);});
+}
+function setInterFilter(f){
+  _interFilter=f;
+  document.getElementById("filterEnCours").classList.toggle("active",f==="en_cours");
+  document.getElementById("filterToutes").classList.toggle("active",f==="toutes");
+  renderInterventions();
+}
+function renderVeh(){
+  var box=document.getElementById("veh");
+  var search=(document.getElementById("searchVeh").value||"").toLowerCase();
+  box.innerHTML="";
+  vehicules.forEach(function(v,i){
+    if(search&&v.name.toLowerCase().indexOf(search)===-1){return;}
+    var div=document.createElement("div");div.className="vehicle";
+    div.innerHTML="<div class='veh-top'><span>"+v.name+"</span><span class='status-"+v.status+"'>"+statusLabels[v.status]+"</span></div>";
+    div.onclick=function(){selectedVeh=i;if(v.intervention){openInter(v.intervention);}else{openPopup();}};
+    box.appendChild(div);
+  });
+}
+function renderInterventions(){
+  var box=document.getElementById("interList");box.innerHTML="";
+  var list=valuesOf(interventions);
+  if(_interFilter==="en_cours"){list=list.filter(function(i){return i.status!=="CLOTUREE";});}
+  if(!list.length){box.innerHTML="<div class='empty'>"+(_interFilter==="en_cours"?"Aucune intervention en cours.":"Aucune intervention.")+"</div>";return;}
+  list.sort(function(a,b){return b.createdAt-a.createdAt;});
+  list.forEach(function(inter){
+    var div=document.createElement("div");div.className="inter-card";
+    var badge=inter.status==="CLOTUREE"?"<span class='badge badge-green'>Cloturee</span>":"<span class='badge badge-red'>En cours</span>";
+    div.innerHTML="<div class='inter-top'><span>"+escapeHtml(inter.type)+"</span>"+badge+"</div>"
+      +"<div class='meta'>"+escapeHtml(inter.adresse)+" — "+formatDateTime(inter.createdAt)+"</div>"
+      +"<div class='meta' style='font-size:12px'>"+escapeHtml(inter.vehicules||"")+"</div>";
+    div.onclick=function(){if(inter.status!=="CLOTUREE"){openInter(inter);}};
+    if(inter.status==="CLOTUREE"){div.style.opacity="0.55";div.style.cursor="default";}
+    box.appendChild(div);
+  });
+}
+function updateKpis(){
+  document.getElementById("kpiInter").textContent=valuesOf(interventions).filter(function(i){return i.status!=="CLOTUREE";}).length;
+  document.getElementById("kpiAlertes").textContent=vehicules.filter(function(v){return v.status===10;}).length;
+  document.getElementById("kpiDispo").textContent=vehicules.filter(function(v){return v.status===7;}).length;
+}
+function openPopup(){
+  var btns=document.getElementById("statusBtns");btns.innerHTML="";
+  for(var i=1;i<=9;i++){
+    (function(status){
+      var b=document.createElement("button");b.textContent=status+" — "+statusLabels[status];
+      b.onclick=function(){
+        var veh=vehicules[selectedVeh];veh.status=status;
+        if(status===7||status===8||status===9){delete veh.intervention;cleanupInterventions();renderInterventions();}
+        renderVeh();updateKpis();addJournal(veh.name+" → statut "+statusLabels[status]);saveData();closePopup();
+        pushVehToFirebase(veh);
+        showToast(veh.name+" : "+statusLabels[status],"info");
+      };
+      btns.appendChild(b);
+    })(i);
+  }
+  document.getElementById("popup").style.display="flex";
+}
+function closePopup(){document.getElementById("popup").style.display="none";}
+
+/**
+ * Cree un depart.
+ * Si <= 4 agents disponibles, la machine tente une affectation automatique.
+ * Si impossible (manque de personnel qualifie), bloque le depart.
+ * La fiche d'inter inclut toujours les piquets (effectif engage).
+ */
+function createInter(){
+  var type=document.getElementById("type").value;
+  var precision=document.getElementById("precision").value;
+  var adresse=document.getElementById("adresse").value.trim();
+  var obs=document.getElementById("obs").value.trim();
+  var vehStr=document.getElementById("vehiculesInter").value.trim();
+  var errEl=document.getElementById("createInterError");
+  var missing=[];
+  if(!type){missing.push("type d'intervention");}
+  if(!precision){missing.push("precision");}
+  if(!adresse){missing.push("adresse");}
+  if(!vehStr){missing.push("vehicule(s)");}
+  if(missing.length){errEl.textContent="Champs manquants : "+missing.join(", ");errEl.style.display="block";setTimeout(function(){errEl.style.display="none";},4000);return;}
+  errEl.style.display="none";
+
+  /* Charger les donnees fraiches */
+  loadEffectifs();loadPresents();
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");
+
+  /* Verifier le nombre d'agents disponibles */
+  var dispos=getAgentsDisponiblesPourDepart();
+
+  if(dispos.length<=4){
+    /* Affectation automatique */
+    var result=affecterAgentsAutoDepart(vehStr);
+    if(!result.success){
+      /* DEPART IMPOSSIBLE */
+      showImpossibleAlert(result.message);
+      addJournal("DEPART IMPOSSIBLE — Manque de personnel pour : "+vehStr);
+      return;
+    }
+    /* Appliquer les nouveaux piquets */
+    Object.keys(result.nouvPiquets).forEach(function(nom){
+      guardPiquets[nom]=result.nouvPiquets[nom];
+    });
+    localStorage.setItem("codisGuardPiquets",JSON.stringify(guardPiquets));
+    showToast("Affectation auto : "+result.nbUtilises+" agent(s) assigne(s) ("+dispos.length+" dispo)","warning");
+    addJournal("Affectation automatique pour "+vehStr+" ("+dispos.length+" agents dispo)");
+  }
+
+  /* Creer l'intervention */
+  var inter={
+    id:"INT-"+getNextInterNumber(),type:type,precision:precision,adresse:adresse,obs:obs,
+    vehicules:vehStr,status:"EN_COURS",createdAt:Date.now(),createdBy:user.mat
+  };
+  var engages=vehStr.split(/\s+/);
+  vehicules.forEach(function(v){if(engages.indexOf(v.name)!==-1){v.status=10;v.intervention=inter;}});
+  /* Sync statuts vers Firebase */
+  vehicules.forEach(function(v){if(engages.indexOf(v.name)!==-1){pushVehToFirebase(v);}});
+  interventions[inter.id]=inter;
+  renderVeh();renderInterventions();updateKpis();
+
+  /* Afficher la derniere fiche avec l'effectif */
+  var effectifHtml=buildEffectifHtml(vehStr);
+  document.getElementById("sheet").innerHTML="<div class='log-line'><b>"+inter.id+"</b>"
+    +"<div class='meta'>"+escapeHtml(type)+" — "+escapeHtml(precision)+"</div>"
+    +"<div class='meta'>"+escapeHtml(adresse)+"</div>"
+    +"<div class='meta'>"+escapeHtml(vehStr)+"</div>"
+    +"<div style='margin-top:8px;padding:8px;background:#0b0e10;border-radius:6px;border:1px solid #303740;font-size:13px'>"+effectifHtml+"</div>"
+    +"<div class='meta' style='color:#aeb7c2;font-size:12px'>"+formatDateTime(inter.createdAt)+"</div></div>";
+
+  addJournal("Depart : "+type+" ("+precision+") — "+adresse+" ["+vehStr+"]");
+
+  /* Reset du formulaire */
+  document.getElementById("type").value="";
+  document.getElementById("precision").innerHTML="<option value=''>Precision intervention</option>";
+  document.getElementById("adresse").value="";
+  document.getElementById("obs").value="";
+  document.getElementById("vehiculesInter").value="";
+  _selectedVehs=[];renderVehTags();
+
+  /* Webhook Discord avec delai */
+  setTimeout(function(){sendDepartWebhook(inter);},5000);
+
+  /* Notifier les STATIONNAIRES/CHEF via localStorage */
+  var effectifText=getEffectifWebhook(vehStr);
+  localStorage.setItem("codisLatestDepart",JSON.stringify({id:inter.id,type:type,precision:precision,adresse:adresse,obs:obs,vehicules:vehStr,createdBy:user.mat,createdAt:inter.createdAt,effectif:effectifText}));
+  saveData();showToast("Depart cree : "+inter.id,"success");
+}
+
+function openInter(inter){
+  selectedInterId=inter.id;
+  guardPiquets=JSON.parse(localStorage.getItem("codisGuardPiquets")||"{}");loadEffectifs();loadPresents();
+  document.getElementById("interContent").innerHTML=
+    "<div class='detail-line'><b>Numero :</b> "+escapeHtml(inter.id)+"</div>"
+    +"<div class='detail-line'><b>Type :</b> "+escapeHtml(inter.type)+"</div>"
+    +"<div class='detail-line'><b>Precision :</b> "+escapeHtml(inter.precision)+"</div>"
+    +"<div class='detail-line'><b>Adresse :</b> "+escapeHtml(inter.adresse)+"</div>"
+    +"<div class='detail-line'><b>Moyens :</b> "+escapeHtml(inter.vehicules)+"</div>"
+    +(inter.obs?"<div class='detail-line'><b>Observations :</b> "+escapeHtml(inter.obs)+"</div>":"")
+    +"<div class='detail-line' style='font-size:12px;color:#aeb7c2'><b>Cree le :</b> "+formatDateTime(inter.createdAt)+"</div>"
+    +(inter.vehicules
+      ?"<div style='margin-top:10px;padding:10px;background:#0b0e10;border-radius:7px;border:1px solid #303740'>"
+        +"<div style='font-size:12px;color:#ff9800;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>Effectif engage</div>"
+        +buildEffectifHtml(inter.vehicules)+"</div>"
+      :"");
+  document.getElementById("interPopup").style.display="flex";
+}
+function closeInter(){document.getElementById("interPopup").style.display="none";}
+function confirmerCloture(){if(!selectedInterId){return;}showConfirm("Cloturer l'intervention","Confirmer la cloture de "+selectedInterId+" ?",function(){closeSelectedInter();});}
+function closeSelectedInter(){
+  if(!selectedInterId){return;}
+  interventions[selectedInterId].status="CLOTUREE";
+  vehicules.forEach(function(v){if(v.intervention&&v.intervention.id===selectedInterId){v.status=7;delete v.intervention;}});
+  /* Sync Firebase apres cloture */
+  vehicules.forEach(function(v){if(!v.intervention){pushVehToFirebase(v);}});
+  addJournal("Cloture : "+selectedInterId);
+  renderVeh();renderInterventions();updateKpis();saveData();closeInter();
+  showToast("Intervention "+selectedInterId+" cloturee","success");
+}
+function cleanupInterventions(){
+  valuesOf(interventions).forEach(function(inter){
+    if(inter.status!=="CLOTUREE"&&!vehicules.some(function(v){return v.intervention&&v.intervention.id===inter.id;})){inter.status="CLOTUREE";}
+  });
+}
+function addJournal(text){
+  journal["j-"+Date.now()]={text:text,time:Date.now(),user:user?user.mat:"SYSTEM"};
+  renderJournal();saveData();
+}
+function renderJournal(){
+  var box=document.getElementById("journal");box.innerHTML="";
+  var search=(document.getElementById("journalSearch")?document.getElementById("journalSearch").value||"":"").toLowerCase();
+  var list=valuesOf(journal);
+  if(!list.length){box.innerHTML="<div class='empty'>Aucun evenement.</div>";return;}
+  list.sort(function(a,b){return b.time-a.time;});
+  var shown=0;
+  list.forEach(function(j){
+    if(search&&j.text.toLowerCase().indexOf(search)===-1&&j.user.toLowerCase().indexOf(search)===-1){return;}
+    var div=document.createElement("div");div.className="log-line";
+    div.innerHTML="<span style='color:#aeb7c2'>"+formatDateTime(j.time)+"</span> <b>["+escapeHtml(j.user)+"]</b> "+escapeHtml(j.text);
+    box.appendChild(div);shown++;
+  });
+  if(!shown){box.innerHTML="<div class='empty'>Aucun resultat.</div>";}
+}
+
+/* ===== NAVIGATION ===== */
+function showLoginError(msg){var el=document.getElementById("loginError");el.textContent=msg;el.style.display="block";}
+function updateNavButtons(){
+  var isCodis=user&&(user.role==="OPERATEUR"||user.role==="CHEF");
+  var isGuard=user&&(user.role==="STATIONNAIRE"||user.role==="CHEF");
+  var isAdmin=user&&user.role==="ADMIN";
+  document.querySelectorAll(".nav-codis").forEach(function(el){el.style.display=isCodis?"inline-block":"none";});
+  document.querySelectorAll(".nav-guard").forEach(function(el){el.style.display=isGuard?"inline-block":"none";});
+  document.querySelectorAll(".nav-remise").forEach(function(el){el.style.display=isGuard?"inline-block":"none";});
+  document.querySelectorAll(".nav-effectifs").forEach(function(el){el.style.display=isAdmin?"inline-block":"none";});
+}
+function loginUser(){
+  var mat=document.getElementById("matricule").value.trim();
+  var pass=document.getElementById("password").value;
+  var role=document.getElementById("role").value;
+  document.getElementById("loginError").style.display="none";
+  if(!usersMap[mat]){showLoginError("Matricule inconnu");return;}
+  if(usersMap[mat].indexOf(role)===-1){showLoginError("Role non autorise pour ce matricule");return;}
+  if(passwords[mat]!==pass){showLoginError("Mot de passe incorrect");return;}
+  user={mat:mat,role:role};loadData();
+  pushAllVehToFirebase();
+  startFirebaseListener();
+  document.getElementById("login").style.display="none";
+  document.getElementById("userInfo").textContent=mat+" — "+role;
+  updateNavButtons();
+  startGuardSheetPolling();
+  if(role==="OPERATEUR"||role==="CHEF"){
+    document.getElementById("app").style.display="grid";
+    renderVeh();renderInterventions();renderJournal();updateKpis();
+    if(role==="CHEF"){startDepartPolling();}
+  }else if(role==="STATIONNAIRE"){
+    document.getElementById("guardPage").style.display="block";
+    loadGuard();renderPresence();renderGuardVehicles();startDepartPolling();
+  }else if(role==="ADMIN"){
+    document.getElementById("effectifsPage").style.display="block";
+    loadEffectifs();renderEffectifs();
+  }
+}
+function hidePages(){
+  ["app","guardPage","effectifsPage","remisePage"].forEach(function(id){document.getElementById(id).style.display="none";});
+}
+function goHome(){
+  stopDepartPolling();stopGuardSheetPolling();closeDepartAlert();hidePages();
+  document.getElementById("login").style.display="flex";
+  document.getElementById("userInfo").textContent="Non connecte";
+  document.querySelectorAll(".nav-codis,.nav-guard,.nav-effectifs,.nav-remise").forEach(function(el){el.style.display="none";});
+  user=null;vehicules=[];interventions={};journal={};selectedVeh=null;selectedInterId=null;
+}
+function showCodis(){if(!user||(user.role!=="OPERATEUR"&&user.role!=="CHEF")){return;}hidePages();document.getElementById("app").style.display="grid";renderVeh();renderInterventions();renderJournal();updateKpis();}
+function showGuard(){if(!user||(user.role!=="STATIONNAIRE"&&user.role!=="CHEF")){return;}hidePages();document.getElementById("guardPage").style.display="block";loadGuard();renderPresence();renderGuardVehicles();}
+function showRemise(){if(!user||(user.role!=="STATIONNAIRE"&&user.role!=="CHEF")){return;}hidePages();document.getElementById("remisePage").style.display="block";renderRemise();}
+function showEffectifs(){if(!user||user.role!=="ADMIN"){return;}hidePages();document.getElementById("effectifsPage").style.display="block";loadEffectifs();renderEffectifs();}
+
+["popup","interPopup","guardPopup","qualPopup","agentQualPopup","remiseInterPopup"].forEach(function(id){
+  var el=document.getElementById(id);if(!el){return;}
+  el.addEventListener("click",function(e){
+    if(e.target===this){
+      if(id==="guardPopup"){closeGuardPopup();}else if(id==="interPopup"){closeInter();}
+      else if(id==="popup"){closePopup();}else if(id==="qualPopup"){closeQualPopup();}
+      else if(id==="agentQualPopup"){closeAgentQualPopup();}else if(id==="remiseInterPopup"){closeRemiseInterPopup();}
+    }
+  });
+});
+
+</script>
+</body>
+</html>
